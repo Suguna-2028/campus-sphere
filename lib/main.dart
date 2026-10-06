@@ -1,5 +1,4 @@
 import 'dart:math' as math;
-import 'dart:ui' show ImageFilter;
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 
@@ -25,34 +24,57 @@ class AppRoutes {
   static const serviceDetail = '/service-detail';
 }
 
-// ═════════════════════════ THEME ═════════════════════════
+// ═════════════════════════ IDENTITY + THEME ═════════════════════════
+// App identity: name, tagline and a crimson + ink + paper palette with serif headings
+// (inspired by the restrained look of traditional university websites).
+const kAppName = 'AVIT Compass';
+const kTagline = 'Find your way around campus';
+
 final ValueNotifier<ThemeMode> themeMode = ValueNotifier(ThemeMode.light);
 
-const kPri = Color(0xFF4F46E5);
-const kPri2 = Color(0xFF7C3AED);
-const kDeep = Color(0xFF1E1B4B);
-const kPink = Color(0xFFEC4899);
-const kCyan = Color(0xFF06B6D4);
+const kPri = Color(0xFFA51C30); // crimson: the single accent colour
+const kInk = Color(0xFF1A1A1A);
 
 class Pal {
   final bool dark;
   const Pal(this.dark);
   static Pal of(BuildContext c) => Pal(Theme.of(c).brightness == Brightness.dark);
-  Color get bg => dark ? const Color(0xFF0C0E1A) : const Color(0xFFF5F6FA);
-  Color get card => dark ? const Color(0xFF161A2B) : Colors.white;
-  Color get text => dark ? const Color(0xFFF1F3FA) : const Color(0xFF14172B);
-  Color get sub => dark ? const Color(0xFF9AA1BC) : const Color(0xFF6B7194);
-  Color get line => dark ? const Color(0xFF2A3050) : const Color(0xFFE2E5F3);
-  Color get soft => dark ? const Color(0xFF1F2445) : const Color(0xFFEEF0FF);
+  Color get bg => dark ? const Color(0xFF111112) : const Color(0xFFF6F5F2);
+  Color get card => dark ? const Color(0xFF1B1B1D) : Colors.white;
+  Color get text => dark ? const Color(0xFFF2F2F2) : kInk;
+  Color get sub => dark ? const Color(0xFFA3A3A9) : const Color(0xFF5E5E63);
+  Color get line => dark ? const Color(0xFF303034) : const Color(0xFFDEDBD5);
+  Color get soft => dark ? const Color(0xFF242427) : const Color(0xFFF1EFEA);
+  Color get accent => dark ? const Color(0xFFE5566B) : kPri; // lighter crimson for dark mode contrast
 }
 
 // One ThemeData for every route (light + dark) - screens never restyle themselves.
-ThemeData buildTheme(bool dark) => ThemeData(
-  useMaterial3: true,
-  brightness: dark ? Brightness.dark : Brightness.light,
-  colorScheme: ColorScheme.fromSeed(
-      seedColor: kPri, brightness: dark ? Brightness.dark : Brightness.light),
-  scaffoldBackgroundColor: Pal(dark).bg,
+ThemeData buildTheme(bool dark) {
+  final p = Pal(dark);
+  final b = dark ? Brightness.dark : Brightness.light;
+  return ThemeData(
+    useMaterial3: true,
+    brightness: b,
+    colorScheme: ColorScheme.fromSeed(seedColor: kPri, brightness: b).copyWith(primary: p.accent, surface: p.card),
+    scaffoldBackgroundColor: p.bg,
+    dividerColor: p.line,
+    navigationBarTheme: NavigationBarThemeData(
+      backgroundColor: p.card,
+      surfaceTintColor: Colors.transparent,
+      indicatorColor: kPri.withOpacity(dark ? .35 : .10),
+      height: 66,
+    ),
+  );
+}
+
+/// Serif heading style (Georgia, falling back to the device serif font).
+TextStyle serif(double size, {FontWeight w = FontWeight.w700, Color? color, double? height}) => TextStyle(
+  fontFamily: 'Georgia',
+  fontFamilyFallback: const ['Times New Roman', 'serif'],
+  fontSize: size,
+  fontWeight: w,
+  color: color,
+  height: height,
 );
 
 class CampusApp extends StatelessWidget {
@@ -61,7 +83,7 @@ class CampusApp extends StatelessWidget {
   Widget build(BuildContext context) => ValueListenableBuilder<ThemeMode>(
     valueListenable: themeMode,
     builder: (_, m, __) => MaterialApp(
-      title: 'AVIT Connect',
+      title: kAppName,
       debugShowCheckedModeBanner: false,
       themeMode: m,
       theme: buildTheme(false),
@@ -77,22 +99,22 @@ class CampusApp extends StatelessWidget {
         AppRoutes.request: (_) => const RequestScreen(),
       },
       // Service Details needs an argument, so it is built here (cast + validate).
-      // A custom PageRouteBuilder gives it a fade + slide-up transition (extension).
+      // A custom PageRouteBuilder gives it a gentle fade + slide-up transition (extension).
       onGenerateRoute: (settings) {
         if (settings.name == AppRoutes.serviceDetail) {
           final args = settings.arguments;
           if (args is CampusService) {
             return PageRouteBuilder<dynamic>(
               settings: settings,
-              transitionDuration: const Duration(milliseconds: 450),
-              reverseTransitionDuration: const Duration(milliseconds: 350),
+              transitionDuration: const Duration(milliseconds: 380),
+              reverseTransitionDuration: const Duration(milliseconds: 300),
               pageBuilder: (_, __, ___) => ServiceDetailScreen(service: args),
               transitionsBuilder: (_, anim, __, child) {
                 final curved = CurvedAnimation(parent: anim, curve: Curves.easeOutCubic);
                 return FadeTransition(
                   opacity: curved,
                   child: SlideTransition(
-                    position: Tween<Offset>(begin: const Offset(0, .06), end: Offset.zero).animate(curved),
+                    position: Tween<Offset>(begin: const Offset(0, .04), end: Offset.zero).animate(curved),
                     child: child,
                   ),
                 );
@@ -125,14 +147,6 @@ final kImgGrad = _u('1523050854058-8df90110c9f1');
 final kImgClass = _u('1524178232363-1fb2b075b655');
 final kImgLibrary = _u('1562774053-701939374585');
 final kImgStudents = _u('1522202176988-66273c2fd55f');
-
-const kGrads = <List<Color>>[
-  [Color(0xFF4F46E5), Color(0xFF7C3AED)],
-  [Color(0xFF0EA5E9), Color(0xFF2563EB)],
-  [Color(0xFF10B981), Color(0xFF0D9488)],
-  [Color(0xFFF97316), Color(0xFFE11D48)],
-  [Color(0xFFEC4899), Color(0xFF8B5CF6)],
-];
 
 class Slot {
   final int day;
@@ -316,6 +330,8 @@ int todayIdx() {
   return d > 4 ? 0 : d;
 }
 
+
+
 // ═════════════════════════ NAVIGATION HELPERS ═════════════════════════
 bool _navBusy = false; // blocks rapid repeated taps from pushing duplicate routes
 
@@ -328,8 +344,16 @@ Future<void> openService(BuildContext context, CampusService s) async {
   _navBusy = false;
   if (!context.mounted) return; // never use a context after an await without checking
   if (result == 'requested') {
-    showToast(context, '${s.action}: request sent to ${s.name}.', icon: Icons.check_circle_rounded);
+    showToast(context, '${s.action}: request sent to ${s.name}.');
   }
+}
+
+/// Opens a named route once; the guard stops double taps from stacking duplicates.
+Future<void> openRoute(BuildContext context, String name) async {
+  if (_navBusy) return;
+  _navBusy = true;
+  await Navigator.pushNamed(context, name);
+  _navBusy = false;
 }
 
 /// Direct Navigator.push + MaterialPageRoute (event details). Returns true when
@@ -339,290 +363,124 @@ Future<bool> openEventDetail(BuildContext context, int i, {bool registered = fal
   _navBusy = true;
   final result = await Navigator.push<String>(
     context,
-    MaterialPageRoute(builder: (_) => EventDetailScreen(event: events[i], index: i, registered: registered)),
+    MaterialPageRoute(builder: (_) => EventDetailScreen(event: events[i], registered: registered)),
   );
   _navBusy = false;
   return result == 'registered';
 }
 
-void showToast(BuildContext context, String msg, {IconData icon = Icons.info_outline_rounded}) {
+void showToast(BuildContext context, String msg) {
   ScaffoldMessenger.of(context)
     ..hideCurrentSnackBar()
     ..showSnackBar(SnackBar(
       behavior: SnackBarBehavior.floating,
-      backgroundColor: kDeep,
-      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
-      content: Row(children: [
-        Icon(icon, color: const Color(0xFF34D399)),
-        const SizedBox(width: 10),
-        Expanded(child: Text(msg, style: const TextStyle(color: Colors.white))),
-      ]),
+      backgroundColor: kInk,
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(6)),
+      content: Text(msg, style: const TextStyle(color: Colors.white)),
     ));
 }
 
 /// Extra space for the back button when a page is shown as a pushed route.
 double backGap(BuildContext c) => (ModalRoute.of(c)?.canPop ?? false) ? 52 : 0;
 
-// ═════════════════════════ VISUAL EFFECT WIDGETS ═════════════════════════
+// ═════════════════════════ BASIC BUILDING BLOCKS ═════════════════════════
 
-/// Frosted-glass panel: blurs whatever is behind it + translucent gradient + light border.
-class Glass extends StatelessWidget {
-  final Widget child;
-  final double radius, blur, opacity;
-  final double? width, height;
-  final EdgeInsetsGeometry? padding;
-  final Color? tint, border;
-  final bool shadow;
-  const Glass({
-    super.key,
-    required this.child,
-    this.radius = 22,
-    this.blur = 18,
-    this.opacity = .16,
-    this.width,
-    this.height,
-    this.padding,
-    this.tint,
-    this.border,
-    this.shadow = false,
-  });
-
+/// Small uppercase label with letter spacing.
+class Eyebrow extends StatelessWidget {
+  final String text;
+  final Color? color;
+  const Eyebrow(this.text, {super.key, this.color});
   @override
-  Widget build(BuildContext context) {
-    final base = tint ?? Colors.white;
-    final r = BorderRadius.circular(radius);
-    final panel = ClipRRect(
-      borderRadius: r,
-      child: BackdropFilter(
-        filter: ImageFilter.blur(sigmaX: blur, sigmaY: blur),
-        child: Container(
-          width: width,
-          height: height,
-          padding: padding,
-          decoration: BoxDecoration(
-            borderRadius: r,
-            gradient: LinearGradient(
-              begin: Alignment.topLeft,
-              end: Alignment.bottomRight,
-              colors: [base.withOpacity(math.min(1.0, opacity + .10)), base.withOpacity(opacity)],
-            ),
-            border: Border.all(color: border ?? Colors.white.withOpacity(.30), width: 1.1),
-          ),
-          child: child,
-        ),
-      ),
-    );
-    if (!shadow) return panel;
-    return Container(
-      decoration: BoxDecoration(
-        borderRadius: r,
-        boxShadow: const [BoxShadow(color: Color(0x1F1E1B4B), blurRadius: 24, offset: Offset(0, 10))],
-      ),
-      child: panel,
-    );
-  }
+  Widget build(BuildContext context) => Text(
+    text.toUpperCase(),
+    style: TextStyle(
+        fontSize: 11.5, fontWeight: FontWeight.w700, letterSpacing: 1.3, color: color ?? Pal.of(context).sub),
+  );
 }
 
-/// Standard content card, glass style.
-class GlassCard extends StatelessWidget {
+/// Flat content card: white surface, hairline border, small radius, no shadow.
+class Panel extends StatelessWidget {
   final Widget child;
   final EdgeInsetsGeometry padding;
   final double radius;
-  const GlassCard({super.key, required this.child, this.padding = const EdgeInsets.all(16), this.radius = 20});
+  const Panel({super.key, required this.child, this.padding = const EdgeInsets.all(16), this.radius = 8});
   @override
   Widget build(BuildContext context) {
     final p = Pal.of(context);
-    return Glass(
-      radius: radius,
-      blur: 16,
-      tint: p.card,
-      opacity: p.dark ? .52 : .66,
-      border: p.line.withOpacity(.7),
-      shadow: !p.dark,
+    return Container(
       padding: padding,
+      clipBehavior: Clip.antiAlias,
+      decoration: BoxDecoration(
+        color: p.card,
+        borderRadius: BorderRadius.circular(radius),
+        border: Border.all(color: p.line),
+      ),
       child: child,
     );
   }
 }
 
-/// Slowly drifting colour blobs behind everything, so the glass has something to blur.
-class Aurora extends StatefulWidget {
-  const Aurora({super.key});
-  @override
-  State<Aurora> createState() => _AuroraState();
-}
-
-class _AuroraState extends State<Aurora> with SingleTickerProviderStateMixin {
-  late final AnimationController c =
-  AnimationController(vsync: this, duration: const Duration(seconds: 22))..repeat();
-
-  @override
-  void dispose() {
-    c.dispose();
-    super.dispose();
-  }
-
-  Widget blob(double size, Color col, double a) => Container(
-    width: size,
-    height: size,
-    decoration: BoxDecoration(
-      shape: BoxShape.circle,
-      gradient: RadialGradient(colors: [col.withOpacity(a), col.withOpacity(0)]),
-    ),
-  );
-
+/// Panel with a crimson bar on its left edge (used for "next" and reminder items).
+class BarPanel extends StatelessWidget {
+  final Widget child;
+  final bool active;
+  final EdgeInsetsGeometry padding;
+  const BarPanel({super.key, required this.child, this.active = true, this.padding = const EdgeInsets.all(16)});
   @override
   Widget build(BuildContext context) {
     final p = Pal.of(context);
-    final a = p.dark ? .38 : .30;
-    return RepaintBoundary(
-      child: LayoutBuilder(builder: (_, b) {
-        final w = b.maxWidth, h = b.maxHeight;
-        return AnimatedBuilder(
-          animation: c,
-          builder: (_, __) {
-            final t = c.value * 2 * math.pi;
-            return Container(
-              color: p.bg,
-              child: Stack(children: [
-                Positioned(
-                    left: w * .45 + math.sin(t) * w * .25 - 220,
-                    top: h * .10 + math.cos(t) * 60 - 220,
-                    child: blob(440, kPri, a)),
-                Positioned(
-                    left: -140 + math.cos(t) * 50,
-                    top: h * .48 + math.sin(t) * 80,
-                    child: blob(380, kPink, a * .8)),
-                Positioned(
-                    right: -150 + math.sin(t) * 60,
-                    top: h * .72 - math.cos(t) * 70,
-                    child: blob(400, kCyan, a * .8)),
-                Positioned(
-                    right: -90 + math.cos(t) * 40,
-                    top: h * .30 + math.sin(t) * 50,
-                    child: blob(260, const Color(0xFFF59E0B), a * .45)),
-              ]),
-            );
-          },
-        );
-      }),
-    );
-  }
-}
-
-/// Network photo with graceful fallback to generated artwork.
-class NetImage extends StatelessWidget {
-  final String url;
-  final List<Color> fallback;
-  final int seed;
-  const NetImage(this.url, this.fallback, this.seed, {super.key});
-  @override
-  Widget build(BuildContext context) => Image.network(
-    url,
-    fit: BoxFit.cover,
-    width: double.infinity,
-    height: double.infinity,
-    loadingBuilder: (_, child, prog) => prog == null ? child : Art(colors: fallback, seed: seed, radius: 0),
-    errorBuilder: (_, __, ___) => Art(colors: fallback, seed: seed, radius: 0),
-  );
-}
-
-/// Photo header with a deep-blue colour wash and coloured light leaks so white text stays readable.
-class PhotoBackdrop extends StatelessWidget {
-  final String url;
-  final int seed;
-  final double radius;
-  final Widget child;
-  const PhotoBackdrop({super.key, required this.url, required this.seed, required this.radius, required this.child});
-  @override
-  Widget build(BuildContext context) => ClipRRect(
-    borderRadius: BorderRadius.vertical(bottom: Radius.circular(radius)),
-    child: Stack(children: [
-      Positioned.fill(child: NetImage(url, const [kDeep, kPri], seed)),
-      Positioned.fill(
-        child: DecoratedBox(
-          decoration: BoxDecoration(
-            gradient: LinearGradient(
-              begin: Alignment.topLeft,
-              end: Alignment.bottomRight,
-              colors: [kDeep.withOpacity(.86), kPri.withOpacity(.74), kPri2.withOpacity(.66)],
-            ),
-          ),
-        ),
-      ),
-      // Light leaks: a pink glow top-right and a cyan glow bottom-left.
-      Positioned(
-        right: -70,
-        top: -70,
-        child: IgnorePointer(
-          child: Container(
-            width: 260,
-            height: 260,
-            decoration: const BoxDecoration(
-              shape: BoxShape.circle,
-              gradient: RadialGradient(colors: [Color(0x66EC4899), Color(0x00EC4899)]),
-            ),
-          ),
-        ),
-      ),
-      Positioned(
-        left: -80,
-        bottom: -90,
-        child: IgnorePointer(
-          child: Container(
-            width: 260,
-            height: 260,
-            decoration: const BoxDecoration(
-              shape: BoxShape.circle,
-              gradient: RadialGradient(colors: [Color(0x5522D3EE), Color(0x0022D3EE)]),
-            ),
-          ),
-        ),
-      ),
-      child,
-    ]),
-  );
-}
-
-/// Event card background: photo + bottom shade + coloured glow shadow.
-class EventPhoto extends StatelessWidget {
-  final CampusEvent e;
-  final int i;
-  final double radius;
-  final Widget child;
-  const EventPhoto({super.key, required this.e, required this.i, required this.child, this.radius = 26});
-  @override
-  Widget build(BuildContext context) {
-    final g = kGrads[i % kGrads.length];
-    final r = BorderRadius.circular(radius);
-    return Container(
-      decoration: BoxDecoration(
-        borderRadius: r,
-        boxShadow: [BoxShadow(color: g[0].withOpacity(.35), blurRadius: 24, offset: const Offset(0, 12))],
-      ),
-      child: ClipRRect(
-        borderRadius: r,
-        child: Stack(children: [
-          Positioned.fill(child: NetImage(e.img, g, i + 10)),
-          Positioned.fill(
-            child: DecoratedBox(
-              decoration: BoxDecoration(
-                gradient: LinearGradient(
-                  begin: Alignment.topCenter,
-                  end: Alignment.bottomCenter,
-                  colors: [g[0].withOpacity(.18), Colors.black.withOpacity(.66)],
-                ),
-              ),
-            ),
-          ),
-          Positioned.fill(child: child),
+    return Panel(
+      padding: EdgeInsets.zero,
+      child: IntrinsicHeight(
+        child: Row(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
+          Container(width: 4, color: active ? kPri : p.line),
+          Expanded(child: Padding(padding: padding, child: child)),
         ]),
       ),
     );
   }
 }
 
-/// Fade + slide-up entrance animation.
+/// Network photo with a plain dark-to-crimson fallback when offline.
+class NetImage extends StatelessWidget {
+  final String url;
+  const NetImage(this.url, {super.key});
+  @override
+  Widget build(BuildContext context) {
+    const fallback = DecoratedBox(
+      decoration: BoxDecoration(
+        gradient: LinearGradient(colors: [kInk, kPri], begin: Alignment.topLeft, end: Alignment.bottomRight),
+      ),
+      child: SizedBox.expand(),
+    );
+    return Image.network(
+      url,
+      fit: BoxFit.cover,
+      width: double.infinity,
+      height: double.infinity,
+      loadingBuilder: (_, child, prog) => prog == null ? child : fallback,
+      errorBuilder: (_, __, ___) => fallback,
+    );
+  }
+}
+
+/// Photo header: one flat dark overlay so white text stays readable, then a crimson rule.
+class PhotoBackdrop extends StatelessWidget {
+  final String url;
+  final Widget child;
+  const PhotoBackdrop({super.key, required this.url, required this.child});
+  @override
+  Widget build(BuildContext context) => Column(mainAxisSize: MainAxisSize.min, children: [
+    Stack(children: [
+      Positioned.fill(child: NetImage(url)),
+      const Positioned.fill(child: ColoredBox(color: Color(0x9E101010))),
+      child,
+    ]),
+    Container(height: 4, color: kPri),
+  ]);
+}
+
+/// Gentle fade + small slide-up entrance.
 class Reveal extends StatelessWidget {
   final Widget child;
   final int index;
@@ -630,14 +488,14 @@ class Reveal extends StatelessWidget {
   @override
   Widget build(BuildContext context) => TweenAnimationBuilder<double>(
     tween: Tween(begin: 0, end: 1),
-    duration: Duration(milliseconds: 450 + index * 90),
-    curve: Curves.easeOutCubic,
-    builder: (_, v, c) => Opacity(opacity: v, child: Transform.translate(offset: Offset(0, 26 * (1 - v)), child: c)),
+    duration: Duration(milliseconds: 350 + index * 60),
+    curve: Curves.easeOut,
+    builder: (_, v, c) => Opacity(opacity: v, child: Transform.translate(offset: Offset(0, 12 * (1 - v)), child: c)),
     child: child,
   );
 }
 
-/// Press-to-shrink tap feedback (visible pressed state) with a screen-reader label.
+/// Tap target with a visible pressed state (fades slightly) and a screen-reader label.
 class Tap extends StatefulWidget {
   final Widget child;
   final VoidCallback? onTap;
@@ -659,172 +517,109 @@ class _TapState extends State<Tap> {
       onTapUp: (_) => setState(() => down = false),
       onTapCancel: () => setState(() => down = false),
       onTap: widget.onTap,
-      child: AnimatedScale(
-        scale: down ? .95 : 1,
-        duration: const Duration(milliseconds: 120),
-        curve: Curves.easeOut,
+      child: AnimatedOpacity(
+        opacity: down ? .65 : 1,
+        duration: const Duration(milliseconds: 100),
         child: widget.child,
       ),
     ),
   );
 }
 
-/// Primary call-to-action button: gradient fill + coloured glow.
-class GradientButton extends StatelessWidget {
+/// Main action button: solid crimson, square-ish corners.
+class PrimaryButton extends StatelessWidget {
   final String text;
   final IconData icon;
   final VoidCallback onTap;
-  final List<Color> colors;
-  const GradientButton(this.text, this.icon, this.onTap, {super.key, this.colors = const [kPri, kPri2]});
+  const PrimaryButton(this.text, this.icon, this.onTap, {super.key});
   @override
   Widget build(BuildContext context) => Tap(
     label: text,
     onTap: onTap,
     child: Container(
-      height: 56,
+      height: 54,
       alignment: Alignment.center,
-      decoration: BoxDecoration(
-        gradient: LinearGradient(colors: colors),
-        borderRadius: BorderRadius.circular(18),
-        boxShadow: [BoxShadow(color: colors[0].withOpacity(.45), blurRadius: 20, offset: const Offset(0, 8))],
-      ),
+      decoration: BoxDecoration(color: kPri, borderRadius: BorderRadius.circular(6)),
       child: Row(mainAxisSize: MainAxisSize.min, children: [
-        Icon(icon, color: Colors.white),
-        const SizedBox(width: 10),
-        Text(text, style: const TextStyle(color: Colors.white, fontSize: 16, fontWeight: FontWeight.w800)),
+        Icon(icon, color: Colors.white, size: 20),
+        const SizedBox(width: 8),
+        Text(text, style: const TextStyle(color: Colors.white, fontSize: 15.5, fontWeight: FontWeight.w700)),
       ]),
     ),
   );
 }
 
-/// Round glass back button. Uses Navigator.canPop so it never shows on the first route.
+/// Secondary button: outline only.
+class OutlineBtn extends StatelessWidget {
+  final String text;
+  final VoidCallback onTap;
+  const OutlineBtn(this.text, this.onTap, {super.key});
+  @override
+  Widget build(BuildContext context) {
+    final p = Pal.of(context);
+    return Tap(
+      label: text,
+      onTap: onTap,
+      child: Container(
+        height: 52,
+        alignment: Alignment.center,
+        decoration: BoxDecoration(
+          borderRadius: BorderRadius.circular(6),
+          border: Border.all(color: p.sub.withOpacity(.5), width: 1.2),
+        ),
+        child: Text(text, style: const TextStyle(fontSize: 15, fontWeight: FontWeight.w700)),
+      ),
+    );
+  }
+}
+
+/// Round back button for photo headers. Uses Navigator.canPop so it never shows on the first route.
 class BackBtn extends StatelessWidget {
   const BackBtn({super.key});
   @override
   Widget build(BuildContext context) {
     if (!Navigator.canPop(context)) return const SizedBox.shrink();
     return Padding(
-      padding: const EdgeInsets.all(12),
+      padding: const EdgeInsets.all(10),
       child: Tap(
         label: 'Go back',
         onTap: () => Navigator.maybePop(context), // pops the current route; never pushes Home again
-        child: const Glass(
-          radius: 24,
-          width: 48,
-          height: 48,
-          opacity: .26,
-          child: Center(child: Icon(Icons.arrow_back_ios_new_rounded, color: Colors.white, size: 18)),
+        child: Container(
+          width: 46,
+          height: 46,
+          decoration: const BoxDecoration(color: Color(0x80000000), shape: BoxShape.circle),
+          child: const Icon(Icons.arrow_back_rounded, color: Colors.white),
         ),
       ),
     );
   }
 }
 
-/// Wraps a page so it can be opened as its own route: aurora background + back button.
+/// Wraps a page so it can be opened as its own route: background + back button.
 class PushedScreen extends StatelessWidget {
   final Widget child;
   const PushedScreen({super.key, required this.child});
   @override
-  Widget build(BuildContext context) {
-    final p = Pal.of(context);
-    return Scaffold(
-      backgroundColor: p.bg,
-      body: Stack(fit: StackFit.expand, children: [
-        const Positioned.fill(child: Aurora()),
-        child,
-        const SafeArea(child: Align(alignment: Alignment.topLeft, child: BackBtn())),
-      ]),
-    );
-  }
-}
-
-// ═════════════════════════ SHARED WIDGETS ═════════════════════════
-class _ArtPainter extends CustomPainter {
-  final List<Color> colors;
-  final int seed;
-  _ArtPainter(this.colors, this.seed);
-  @override
-  void paint(Canvas canvas, Size size) {
-    final rect = Offset.zero & size;
-    canvas.drawRect(
-        rect,
-        Paint()
-          ..shader = LinearGradient(colors: colors, begin: Alignment.topLeft, end: Alignment.bottomRight)
-              .createShader(rect));
-    final r = math.Random(seed);
-    final m = size.shortestSide;
-    for (int i = 0; i < 4; i++) {
-      final c = Offset(r.nextDouble() * size.width, r.nextDouble() * size.height);
-      canvas.drawCircle(c, m * (.25 + r.nextDouble() * .5),
-          Paint()..color = Colors.white.withOpacity(.05 + r.nextDouble() * .07));
-    }
-    for (int i = 0; i < 2; i++) {
-      final c = Offset(size.width * (.6 + r.nextDouble() * .4), size.height * r.nextDouble());
-      canvas.drawCircle(
-          c,
-          m * (.35 + r.nextDouble() * .3),
-          Paint()
-            ..style = PaintingStyle.stroke
-            ..strokeWidth = 1.5
-            ..color = Colors.white.withOpacity(.18));
-    }
-    final dot = Paint()..color = Colors.white.withOpacity(.22);
-    for (int x = 0; x < 6; x++) {
-      for (int y = 0; y < 4; y++) {
-        canvas.drawCircle(Offset(size.width - 28 - x * 12.0, 22 + y * 12.0), 1.6, dot);
-      }
-    }
-  }
-
-  @override
-  bool shouldRepaint(covariant _ArtPainter old) => false;
-}
-
-/// Generated artwork background (works offline, no images needed).
-class Art extends StatelessWidget {
-  final List<Color> colors;
-  final int seed;
-  final Widget? child;
-  final double radius;
-  const Art({super.key, required this.colors, this.seed = 1, this.child, this.radius = 24});
-  @override
-  Widget build(BuildContext context) => ClipRRect(
-    borderRadius: BorderRadius.circular(radius),
-    child: Stack(children: [
-      Positioned.fill(child: CustomPaint(painter: _ArtPainter(colors, seed))),
-      if (child != null) child!,
+  Widget build(BuildContext context) => Scaffold(
+    backgroundColor: Pal.of(context).bg,
+    body: Stack(fit: StackFit.expand, children: [
+      Positioned.fill(child: child),
+      const SafeArea(child: Align(alignment: Alignment.topLeft, child: BackBtn())),
     ]),
   );
 }
 
-class PageHeader extends StatelessWidget {
-  final String title, sub, img;
-  final int seed;
-  final Widget? extra;
-  const PageHeader(this.title, this.sub, this.img, {super.key, this.seed = 2, this.extra});
+/// Crimson monogram used as the app logo.
+class Monogram extends StatelessWidget {
+  final double size;
+  const Monogram(this.size, {super.key});
   @override
-  Widget build(BuildContext context) => PhotoBackdrop(
-    url: img,
-    seed: seed,
-    radius: 32,
-    child: SizedBox(
-      width: double.infinity,
-      child: SafeArea(
-        bottom: false,
-        child: Padding(
-          padding: const EdgeInsets.fromLTRB(22, 18, 22, 28),
-          child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-            SizedBox(height: backGap(context)),
-            Text(title,
-                style: const TextStyle(
-                    color: Colors.white, fontSize: 30, fontWeight: FontWeight.w800, letterSpacing: -.5)),
-            const SizedBox(height: 4),
-            Text(sub, style: const TextStyle(color: Colors.white70, fontSize: 14)),
-            if (extra != null) ...[const SizedBox(height: 16), extra!],
-          ]),
-        ),
-      ),
-    ),
+  Widget build(BuildContext context) => Container(
+    width: size,
+    height: size,
+    alignment: Alignment.center,
+    decoration: BoxDecoration(color: kPri, borderRadius: BorderRadius.circular(4)),
+    child: Text('A', style: serif(size * .56, color: Colors.white)),
   );
 }
 
@@ -838,13 +633,10 @@ class Avatar extends StatelessWidget {
     alignment: Alignment.center,
     decoration: BoxDecoration(
       shape: BoxShape.circle,
-      gradient: const LinearGradient(
-          colors: [Color(0xFF22D3EE), kPri2, kPink], begin: Alignment.topLeft, end: Alignment.bottomRight),
-      border: Border.all(color: Colors.white.withOpacity(.8), width: 2),
-      boxShadow: [BoxShadow(color: kPri2.withOpacity(.55), blurRadius: size * .4)],
+      color: kPri,
+      border: Border.all(color: Colors.white, width: 2),
     ),
-    child: Text(kName[0],
-        style: TextStyle(color: Colors.white, fontWeight: FontWeight.w800, fontSize: size * .34)),
+    child: Text(kName[0], style: serif(size * .42, color: Colors.white)),
   );
 }
 
@@ -858,236 +650,167 @@ class Pill extends StatelessWidget {
   Widget build(BuildContext context) => Container(
     padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
     decoration: BoxDecoration(
-      color: onDark ? Colors.white.withOpacity(.2) : color.withOpacity(.12),
-      borderRadius: BorderRadius.circular(20),
-      border: onDark ? Border.all(color: Colors.white.withOpacity(.3)) : null,
+      color: onDark ? Colors.white.withOpacity(.16) : color.withOpacity(.10),
+      borderRadius: BorderRadius.circular(4),
+      border: onDark ? Border.all(color: Colors.white.withOpacity(.4)) : null,
     ),
     child: Row(mainAxisSize: MainAxisSize.min, children: [
-      if (icon != null) ...[Icon(icon, size: 14, color: onDark ? Colors.white : color), const SizedBox(width: 4)],
-      Text(text,
-          style: TextStyle(fontSize: 12, fontWeight: FontWeight.w700, color: onDark ? Colors.white : color)),
+      if (icon != null) ...[Icon(icon, size: 14, color: onDark ? Colors.white : color), const SizedBox(width: 5)],
+      Flexible(
+        child: Text(text,
+            style: TextStyle(fontSize: 12, fontWeight: FontWeight.w700, color: onDark ? Colors.white : color)),
+      ),
     ]),
   );
 }
 
-/// Section heading with a gradient accent bar.
+/// Serif section heading with a short crimson rule underneath.
 class SectionTitle extends StatelessWidget {
   final String title;
   final String? action;
   final VoidCallback? onTap;
   const SectionTitle(this.title, {super.key, this.action, this.onTap});
   @override
-  Widget build(BuildContext context) => Padding(
-    padding: const EdgeInsets.fromLTRB(0, 28, 0, 14),
-    child: Row(children: [
-      Container(
-        width: 5,
-        height: 22,
-        margin: const EdgeInsets.only(right: 10),
-        decoration: BoxDecoration(
-          gradient: const LinearGradient(colors: [kPri, kPink], begin: Alignment.topCenter, end: Alignment.bottomCenter),
-          borderRadius: BorderRadius.circular(4),
+  Widget build(BuildContext context) {
+    final p = Pal.of(context);
+    return Padding(
+      padding: const EdgeInsets.fromLTRB(0, 32, 0, 16),
+      child: Row(crossAxisAlignment: CrossAxisAlignment.end, children: [
+        Expanded(
+          child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+            Text(title, style: serif(23)),
+            const SizedBox(height: 8),
+            Container(width: 36, height: 3, color: kPri),
+          ]),
         ),
-      ),
-      Expanded(
-          child: Text(title,
-              style: const TextStyle(fontSize: 19, fontWeight: FontWeight.w800, letterSpacing: -.3))),
-      if (action != null)
-        Tap(
-          label: action,
-          onTap: onTap,
-          child: Padding(
-            padding: const EdgeInsets.symmetric(vertical: 8),
-            child: Text(action!, style: const TextStyle(color: kPri, fontWeight: FontWeight.w700)),
+        if (action != null)
+          Tap(
+            label: action,
+            onTap: onTap,
+            child: Padding(
+              padding: const EdgeInsets.symmetric(vertical: 10),
+              child: Text('${action!.toUpperCase()}  →',
+                  style: TextStyle(color: p.accent, fontWeight: FontWeight.w700, fontSize: 12, letterSpacing: 1)),
+            ),
           ),
-        ),
-    ]),
-  );
+      ]),
+    );
+  }
 }
 
-/// Photo navigation card used on the dashboard (opens a named route).
-class NavCard extends StatelessWidget {
-  final String title, sub, img;
-  final IconData icon;
-  final List<Color> grad;
-  final int seed;
+/// Card with a photo on top and a caption below (navigation tiles, services, events).
+class PhotoCard extends StatelessWidget {
+  final String img, label;
+  final double imgHeight;
+  final Widget caption;
+  final String? heroTag;
   final VoidCallback onTap;
-  const NavCard({
+  const PhotoCard({
     super.key,
-    required this.title,
-    required this.sub,
     required this.img,
-    required this.icon,
-    required this.grad,
-    required this.seed,
+    required this.label,
+    required this.caption,
     required this.onTap,
+    this.imgHeight = 100,
+    this.heroTag,
   });
   @override
   Widget build(BuildContext context) => Tap(
-    label: 'Open $title',
+    label: label,
     onTap: onTap,
-    child: Container(
-      height: 124,
-      decoration: BoxDecoration(
-        borderRadius: BorderRadius.circular(24),
-        boxShadow: [BoxShadow(color: grad[0].withOpacity(.38), blurRadius: 20, offset: const Offset(0, 10))],
-      ),
-      child: ClipRRect(
-        borderRadius: BorderRadius.circular(24),
-        child: Stack(children: [
-          Positioned.fill(child: NetImage(img, grad, seed)),
-          Positioned.fill(
-            child: DecoratedBox(
-              decoration: BoxDecoration(
-                gradient: LinearGradient(
-                  begin: Alignment.topLeft,
-                  end: Alignment.bottomRight,
-                  colors: [grad[0].withOpacity(.86), grad[1].withOpacity(.58)],
-                ),
-              ),
-            ),
-          ),
-          Padding(
-            padding: const EdgeInsets.all(14),
-            child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-              Glass(
-                radius: 14,
-                width: 40,
-                height: 40,
-                opacity: .22,
-                child: Center(child: Icon(icon, color: Colors.white, size: 22)),
-              ),
-              const Spacer(),
-              Text(title, style: const TextStyle(color: Colors.white, fontSize: 17, fontWeight: FontWeight.w800)),
-              Text(sub, maxLines: 1, overflow: TextOverflow.ellipsis,
-                  style: const TextStyle(color: Colors.white70, fontSize: 12)),
-            ]),
-          ),
-        ]),
-      ),
+    child: Panel(
+      padding: EdgeInsets.zero,
+      child: Column(crossAxisAlignment: CrossAxisAlignment.start, mainAxisSize: MainAxisSize.min, children: [
+        SizedBox(
+          height: imgHeight,
+          width: double.infinity,
+          child: heroTag == null ? NetImage(img) : Hero(tag: heroTag!, child: NetImage(img)),
+        ),
+        Container(height: 3, color: kPri),
+        Padding(padding: const EdgeInsets.all(14), child: caption),
+      ]),
     ),
   );
-}
-
-/// Service card with a photo (shared Hero image with the details route).
-class ServiceCard extends StatelessWidget {
-  final CampusService s;
-  const ServiceCard(this.s, {super.key});
-  @override
-  Widget build(BuildContext context) {
-    final p = Pal.of(context);
-    return GlassCard(
-      radius: 22,
-      padding: EdgeInsets.zero,
-      child: ClipRRect(
-        borderRadius: BorderRadius.circular(22),
-        child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-          Expanded(
-            flex: 5,
-            child: Stack(fit: StackFit.expand, children: [
-              Hero(tag: 'svc-img-${s.name}', child: NetImage(s.img, [s.color, kDeep], s.name.length)),
-              DecoratedBox(
-                decoration: BoxDecoration(
-                  gradient: LinearGradient(
-                    begin: Alignment.topCenter,
-                    end: Alignment.bottomCenter,
-                    colors: [Colors.transparent, s.color.withOpacity(.62)],
-                  ),
-                ),
-              ),
-              Positioned(
-                top: 10,
-                left: 10,
-                child: Container(
-                  width: 38,
-                  height: 38,
-                  decoration: BoxDecoration(
-                    gradient: LinearGradient(colors: [s.color, s.color.withOpacity(.7)]),
-                    borderRadius: BorderRadius.circular(13),
-                    boxShadow: [BoxShadow(color: s.color.withOpacity(.55), blurRadius: 14)],
-                  ),
-                  child: Icon(s.icon, color: Colors.white, size: 21),
-                ),
-              ),
-            ]),
-          ),
-          Padding(
-            padding: const EdgeInsets.fromLTRB(12, 10, 12, 12),
-            child: Column(crossAxisAlignment: CrossAxisAlignment.start, mainAxisSize: MainAxisSize.min, children: [
-              Text(s.name, maxLines: 1, overflow: TextOverflow.ellipsis,
-                  style: const TextStyle(fontSize: 15.5, fontWeight: FontWeight.w800)),
-              const SizedBox(height: 2),
-              Text(s.sub, maxLines: 1, overflow: TextOverflow.ellipsis,
-                  style: TextStyle(color: p.sub, fontSize: 12.5)),
-            ]),
-          ),
-        ]),
-      ),
-    );
-  }
 }
 
 class ClassCard extends StatelessWidget {
   final Slot s;
   final int index;
-  final bool highlight; // the next class gets a gradient border + glow
+  final bool highlight; // the next class gets a crimson bar and a label
   const ClassCard(this.s, this.index, {super.key, this.highlight = false});
   @override
   Widget build(BuildContext context) {
     final p = Pal.of(context);
-    final card = GlassCard(
-      child: Row(children: [
-        SizedBox(
-          width: 48,
-          child: Column(children: [
-            Text(s.start, style: const TextStyle(fontWeight: FontWeight.w800, fontSize: 15)),
-            const SizedBox(height: 2),
-            Text(s.end, style: TextStyle(color: p.sub, fontSize: 12)),
-          ]),
-        ),
-        Container(
-          width: 4,
-          height: 60,
-          margin: const EdgeInsets.symmetric(horizontal: 14),
-          decoration: BoxDecoration(
-            color: s.color,
-            borderRadius: BorderRadius.circular(4),
-            boxShadow: [BoxShadow(color: s.color.withOpacity(.6), blurRadius: 10)],
-          ),
-        ),
-        Expanded(
-          child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-            Text(s.name, style: const TextStyle(fontSize: 16, fontWeight: FontWeight.w700)),
-            const SizedBox(height: 3),
-            Text('${s.code} • ${s.who}', style: TextStyle(color: p.sub, fontSize: 13)),
-            const SizedBox(height: 8),
-            Wrap(spacing: 6, runSpacing: 6, children: [
-              Pill(s.room, s.color, icon: Icons.place_outlined),
-              if (highlight) const Pill('NEXT UP', kPri, icon: Icons.bolt_rounded),
-            ]),
-          ]),
-        ),
-      ]),
-    );
     return Reveal(
       index: index,
       child: Padding(
         padding: const EdgeInsets.only(bottom: 12),
-        child: highlight
-            ? Container(
-          padding: const EdgeInsets.all(1.8),
-          decoration: BoxDecoration(
-            borderRadius: BorderRadius.circular(22),
-            gradient: const LinearGradient(colors: [kPri, kPri2, kPink]),
-            boxShadow: [BoxShadow(color: kPri.withOpacity(.4), blurRadius: 20, offset: const Offset(0, 8))],
-          ),
-          child: card,
-        )
-            : card,
+        child: BarPanel(
+          active: highlight,
+          child: Row(children: [
+            SizedBox(
+              width: 50,
+              child: Column(children: [
+                Text(s.start, style: const TextStyle(fontWeight: FontWeight.w800, fontSize: 15)),
+                const SizedBox(height: 2),
+                Text(s.end, style: TextStyle(color: p.sub, fontSize: 12.5)),
+              ]),
+            ),
+            Container(width: 1, height: 52, margin: const EdgeInsets.symmetric(horizontal: 14), color: p.line),
+            Expanded(
+              child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+                if (highlight) ...[Eyebrow('Next class', color: p.accent), const SizedBox(height: 3)],
+                Text(s.name, style: serif(17)),
+                const SizedBox(height: 4),
+                Text('${s.code} • ${s.who}', style: TextStyle(color: p.sub, fontSize: 13)),
+                const SizedBox(height: 6),
+                Row(children: [
+                  Icon(Icons.place_outlined, size: 15, color: p.sub),
+                  const SizedBox(width: 4),
+                  Text(s.room, style: TextStyle(color: p.sub, fontSize: 13)),
+                ]),
+              ]),
+            ),
+          ]),
+        ),
       ),
     );
   }
 }
+
+/// Icon + label + value row used on the detail screens and profile.
+Widget detailRow(Pal p, IconData icon, String label, String value, {VoidCallback? onTap}) => Tap(
+  label: '$label: $value',
+  onTap: onTap,
+  child: Padding(
+    padding: const EdgeInsets.symmetric(vertical: 12),
+    child: Row(children: [
+      Icon(icon, color: p.accent, size: 22),
+      const SizedBox(width: 14),
+      Expanded(
+        child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+          Eyebrow(label),
+          const SizedBox(height: 3),
+          Text(value, style: const TextStyle(fontWeight: FontWeight.w600, fontSize: 15)),
+        ]),
+      ),
+      if (onTap != null) Icon(Icons.copy_rounded, size: 18, color: p.sub),
+    ]),
+  ),
+);
+
+/// Full-width photo at the top of a detail screen, followed by the crimson rule.
+Widget detailHero(String img, {String? tag}) => Column(mainAxisSize: MainAxisSize.min, children: [
+  SizedBox(
+    height: 280,
+    width: double.infinity,
+    child: Stack(fit: StackFit.expand, children: [
+      tag == null ? NetImage(img) : Hero(tag: tag, child: NetImage(img)),
+      const ColoredBox(color: Color(0x40000000)),
+    ]),
+  ),
+  Container(height: 4, color: kPri),
+]);
 
 // ═════════════════════════ ROUTE SCREENS (each one is its own class) ═════════════════════════
 class TimetableScreen extends StatelessWidget {
@@ -1120,32 +843,6 @@ class RequestScreen extends StatelessWidget {
   Widget build(BuildContext context) => const PushedScreen(child: RequestPage());
 }
 
-/// Info row used on the detail routes.
-Widget detailRow(Pal p, IconData icon, Color c, String label, String value, {VoidCallback? onTap}) => Tap(
-  label: '$label: $value',
-  onTap: onTap,
-  child: Padding(
-    padding: const EdgeInsets.symmetric(vertical: 10),
-    child: Row(children: [
-      Container(
-        width: 42,
-        height: 42,
-        decoration: BoxDecoration(color: c.withOpacity(.14), borderRadius: BorderRadius.circular(13)),
-        child: Icon(icon, color: c, size: 21),
-      ),
-      const SizedBox(width: 14),
-      Expanded(
-        child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-          Text(label, style: TextStyle(color: p.sub, fontSize: 12.5)),
-          const SizedBox(height: 2),
-          Text(value, style: const TextStyle(fontWeight: FontWeight.w700, fontSize: 15)),
-        ]),
-      ),
-      if (onTap != null) Icon(Icons.copy_rounded, size: 18, color: p.sub),
-    ]),
-  ),
-);
-
 /// Service Details: receives a CampusService, returns 'requested' with Navigator.pop.
 class ServiceDetailScreen extends StatelessWidget {
   final CampusService service;
@@ -1158,102 +855,37 @@ class ServiceDetailScreen extends StatelessWidget {
     return Scaffold(
       backgroundColor: p.bg,
       body: Stack(fit: StackFit.expand, children: [
-        const Positioned.fill(child: Aurora()),
         ListView(padding: EdgeInsets.zero, children: [
-          SizedBox(
-            height: 320,
-            child: ClipRRect(
-              borderRadius: const BorderRadius.vertical(bottom: Radius.circular(36)),
-              child: Stack(fit: StackFit.expand, children: [
-                Hero(tag: 'svc-img-${s.name}', child: NetImage(s.img, [s.color, kDeep], s.name.length)),
-                DecoratedBox(
-                  decoration: BoxDecoration(
-                    gradient: LinearGradient(
-                      begin: Alignment.topCenter,
-                      end: Alignment.bottomCenter,
-                      colors: [Colors.black.withOpacity(.18), s.color.withOpacity(.35), kDeep.withOpacity(.92)],
-                    ),
-                  ),
-                ),
-                Positioned(
-                  left: 22,
-                  right: 22,
-                  bottom: 24,
-                  child: Column(crossAxisAlignment: CrossAxisAlignment.start, mainAxisSize: MainAxisSize.min, children: [
-                    Container(
-                      width: 56,
-                      height: 56,
-                      decoration: BoxDecoration(
-                        gradient: LinearGradient(colors: [s.color, s.color.withOpacity(.7)]),
-                        borderRadius: BorderRadius.circular(18),
-                        boxShadow: [BoxShadow(color: s.color.withOpacity(.6), blurRadius: 22)],
-                      ),
-                      child: Icon(s.icon, color: Colors.white, size: 30),
-                    ),
-                    const SizedBox(height: 14),
-                    Text(s.name,
-                        style: const TextStyle(
-                            color: Colors.white, fontSize: 32, fontWeight: FontWeight.w800, letterSpacing: -.5)),
-                    const SizedBox(height: 4),
-                    Text(s.sub, style: const TextStyle(color: Colors.white70, fontSize: 15)),
-                    const SizedBox(height: 12),
-                    Pill(s.status, Colors.white, icon: Icons.circle, onDark: true),
-                  ]),
-                ),
-              ]),
-            ),
-          ),
+          detailHero(s.img, tag: 'svc-img-${s.name}'),
           Padding(
-            padding: const EdgeInsets.fromLTRB(20, 22, 20, 40),
+            padding: const EdgeInsets.fromLTRB(22, 24, 22, 40),
             child: Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
-              Reveal(
-                child: GlassCard(
-                  radius: 22,
-                  padding: const EdgeInsets.all(18),
-                  child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-                    const Text('About', style: TextStyle(fontSize: 17, fontWeight: FontWeight.w800)),
-                    const SizedBox(height: 8),
-                    Text(s.info, style: TextStyle(color: p.sub, fontSize: 15, height: 1.5)),
-                  ]),
-                ),
-              ),
+              Eyebrow('${s.sub}  •  ${s.status}', color: p.accent),
+              const SizedBox(height: 8),
+              Text(s.name, style: serif(34)),
+              const SizedBox(height: 14),
+              Container(width: 36, height: 3, color: kPri),
               const SizedBox(height: 16),
-              Reveal(
-                index: 1,
-                child: GlassCard(
-                  radius: 22,
-                  padding: const EdgeInsets.fromLTRB(18, 8, 18, 8),
-                  child: Column(children: [
-                    detailRow(p, Icons.location_on_outlined, kPri, 'Location', s.location),
-                    Divider(height: 1, color: p.line),
-                    detailRow(p, Icons.access_time_rounded, const Color(0xFFF59E0B), 'Opening hours', s.hours),
-                    Divider(height: 1, color: p.line),
-                    detailRow(p, Icons.mail_outline_rounded, const Color(0xFF10B981), 'Contact', s.contact,
-                        onTap: () {
-                          Clipboard.setData(ClipboardData(text: s.contact));
-                          showToast(context, 'Contact copied: ${s.contact}', icon: Icons.copy_rounded);
-                        }),
-                  ]),
-                ),
-              ),
+              Text(s.info, style: TextStyle(color: p.sub, fontSize: 16, height: 1.55)),
               const SizedBox(height: 24),
-              // Returned result: the previous route receives 'requested' and shows a confirmation.
-              GradientButton(s.action, Icons.send_rounded, () => Navigator.pop(context, 'requested'),
-                  colors: [s.color, kPri2]),
-              const SizedBox(height: 12),
-              Tap(
-                label: 'Return to services',
-                onTap: () => Navigator.pop(context), // plain pop: previous route revealed, no result
-                child: Container(
-                  height: 54,
-                  alignment: Alignment.center,
-                  decoration: BoxDecoration(
-                    borderRadius: BorderRadius.circular(18),
-                    border: Border.all(color: p.line, width: 1.5),
-                  ),
-                  child: const Text('Return', style: TextStyle(fontSize: 15.5, fontWeight: FontWeight.w700)),
-                ),
+              Panel(
+                padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
+                child: Column(children: [
+                  detailRow(p, Icons.location_on_outlined, 'Location', s.location),
+                  Divider(height: 1, color: p.line),
+                  detailRow(p, Icons.access_time_rounded, 'Opening hours', s.hours),
+                  Divider(height: 1, color: p.line),
+                  detailRow(p, Icons.mail_outline_rounded, 'Contact', s.contact, onTap: () {
+                    Clipboard.setData(ClipboardData(text: s.contact));
+                    showToast(context, 'Contact copied: ${s.contact}');
+                  }),
+                ]),
               ),
+              const SizedBox(height: 28),
+              // Returned result: the previous route receives 'requested' and shows a confirmation.
+              PrimaryButton(s.action, Icons.send_rounded, () => Navigator.pop(context, 'requested')),
+              const SizedBox(height: 12),
+              OutlineBtn('Return', () => Navigator.pop(context)), // plain pop: no result
             ]),
           ),
         ]),
@@ -1266,109 +898,56 @@ class ServiceDetailScreen extends StatelessWidget {
 /// Event Details (opened with a direct Navigator.push + MaterialPageRoute).
 class EventDetailScreen extends StatelessWidget {
   final CampusEvent event;
-  final int index;
   final bool registered;
-  const EventDetailScreen({super.key, required this.event, required this.index, required this.registered});
+  const EventDetailScreen({super.key, required this.event, required this.registered});
 
   @override
   Widget build(BuildContext context) {
     final p = Pal.of(context);
     final e = event;
-    final g = kGrads[index % kGrads.length];
     return Scaffold(
       backgroundColor: p.bg,
       body: Stack(fit: StackFit.expand, children: [
-        const Positioned.fill(child: Aurora()),
         ListView(padding: EdgeInsets.zero, children: [
-          SizedBox(
-            height: 320,
-            child: ClipRRect(
-              borderRadius: const BorderRadius.vertical(bottom: Radius.circular(36)),
-              child: Stack(fit: StackFit.expand, children: [
-                NetImage(e.img, g, index + 10),
-                DecoratedBox(
-                  decoration: BoxDecoration(
-                    gradient: LinearGradient(
-                      begin: Alignment.topCenter,
-                      end: Alignment.bottomCenter,
-                      colors: [g[0].withOpacity(.2), Colors.black.withOpacity(.78)],
-                    ),
-                  ),
-                ),
-                Positioned(
-                  left: 22,
-                  right: 22,
-                  bottom: 24,
-                  child: Column(crossAxisAlignment: CrossAxisAlignment.start, mainAxisSize: MainAxisSize.min, children: [
-                    Pill(e.cat, Colors.white, icon: e.icon, onDark: true),
-                    const SizedBox(height: 12),
-                    Text(e.title,
-                        style: const TextStyle(
-                            color: Colors.white, fontSize: 30, fontWeight: FontWeight.w800, letterSpacing: -.5)),
-                  ]),
-                ),
-              ]),
-            ),
-          ),
+          detailHero(e.img),
           Padding(
-            padding: const EdgeInsets.fromLTRB(20, 22, 20, 40),
+            padding: const EdgeInsets.fromLTRB(22, 24, 22, 40),
             child: Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
-              Reveal(
-                child: GlassCard(
-                  radius: 22,
-                  padding: const EdgeInsets.all(18),
-                  child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-                    const Text('About this event', style: TextStyle(fontSize: 17, fontWeight: FontWeight.w800)),
-                    const SizedBox(height: 8),
-                    Text(e.about, style: TextStyle(color: p.sub, fontSize: 15, height: 1.5)),
-                  ]),
-                ),
-              ),
+              Eyebrow(e.cat, color: p.accent),
+              const SizedBox(height: 8),
+              Text(e.title, style: serif(32, height: 1.15)),
+              const SizedBox(height: 14),
+              Container(width: 36, height: 3, color: kPri),
               const SizedBox(height: 16),
-              Reveal(
-                index: 1,
-                child: GlassCard(
-                  radius: 22,
-                  padding: const EdgeInsets.fromLTRB(18, 8, 18, 8),
-                  child: Column(children: [
-                    detailRow(p, Icons.event_rounded, g[0], 'Date & time', e.date),
-                    Divider(height: 1, color: p.line),
-                    detailRow(p, Icons.place_outlined, const Color(0xFFF59E0B), 'Venue', e.venue),
-                    Divider(height: 1, color: p.line),
-                    detailRow(p, Icons.groups_rounded, const Color(0xFF10B981), 'Attendance', e.going),
-                  ]),
-                ),
-              ),
+              Text(e.about, style: TextStyle(color: p.sub, fontSize: 16, height: 1.55)),
               const SizedBox(height: 24),
+              Panel(
+                padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
+                child: Column(children: [
+                  detailRow(p, Icons.event_rounded, 'Date & time', e.date),
+                  Divider(height: 1, color: p.line),
+                  detailRow(p, Icons.place_outlined, 'Venue', e.venue),
+                  Divider(height: 1, color: p.line),
+                  detailRow(p, Icons.groups_rounded, 'Attendance', e.going),
+                ]),
+              ),
+              const SizedBox(height: 28),
               if (registered)
                 Container(
-                  height: 56,
-                  alignment: Alignment.center,
-                  decoration: BoxDecoration(
-                    color: const Color(0xFF22C55E).withOpacity(.16),
-                    borderRadius: BorderRadius.circular(18),
-                    border: Border.all(color: const Color(0xFF22C55E)),
-                  ),
-                  child: const Text('✓ You are registered',
-                      style: TextStyle(color: Color(0xFF16A34A), fontSize: 16, fontWeight: FontWeight.w800)),
-                )
-              else
-                GradientButton('Register now', Icons.how_to_reg_rounded,
-                        () => Navigator.pop(context, 'registered'), colors: g),
-              const SizedBox(height: 12),
-              Tap(
-                label: 'Return to events',
-                onTap: () => Navigator.pop(context),
-                child: Container(
                   height: 54,
                   alignment: Alignment.center,
                   decoration: BoxDecoration(
-                    borderRadius: BorderRadius.circular(18),
-                    border: Border.all(color: p.line, width: 1.5),
+                    color: kSuccess.withOpacity(.10),
+                    borderRadius: BorderRadius.circular(6),
+                    border: Border.all(color: kSuccess),
                   ),
-                  child: const Text('Return', style: TextStyle(fontSize: 15.5, fontWeight: FontWeight.w700)),
-                ),
-              ),
+                  child: const Text('✓ You are registered',
+                      style: TextStyle(color: kSuccess, fontSize: 15.5, fontWeight: FontWeight.w800)),
+                )
+              else
+                PrimaryButton('Register now', Icons.how_to_reg_rounded, () => Navigator.pop(context, 'registered')),
+              const SizedBox(height: 12),
+              OutlineBtn('Return', () => Navigator.pop(context)),
             ]),
           ),
         ]),
@@ -1387,46 +966,27 @@ class UnknownRouteScreen extends StatelessWidget {
     final p = Pal.of(context);
     return Scaffold(
       backgroundColor: p.bg,
-      body: Stack(fit: StackFit.expand, children: [
-        const Positioned.fill(child: Aurora()),
-        SafeArea(
-          child: Center(
-            child: SingleChildScrollView(
-              padding: const EdgeInsets.all(28),
-              child: Column(mainAxisSize: MainAxisSize.min, children: [
-                Container(
-                  width: 96,
-                  height: 96,
-                  decoration: BoxDecoration(
-                    shape: BoxShape.circle,
-                    gradient: const LinearGradient(colors: [kPri, kPink]),
-                    boxShadow: [BoxShadow(color: kPri.withOpacity(.5), blurRadius: 30)],
-                  ),
-                  child: const Icon(Icons.explore_off_rounded, color: Colors.white, size: 46),
-                ),
-                const SizedBox(height: 20),
-                ShaderMask(
-                  shaderCallback: (r) => const LinearGradient(colors: [kPri, kPink]).createShader(r),
-                  child: const Text('404',
-                      style: TextStyle(fontSize: 84, fontWeight: FontWeight.w900, color: Colors.white, height: 1)),
-                ),
-                const SizedBox(height: 8),
-                const Text('This route does not exist', style: TextStyle(fontSize: 20, fontWeight: FontWeight.w800)),
-                const SizedBox(height: 12),
-                Pill(routeName, kPri, icon: Icons.link_off_rounded),
-                const SizedBox(height: 12),
-                Text('The app could not open this page. Go back and try another option.',
-                    textAlign: TextAlign.center, style: TextStyle(color: p.sub, height: 1.5)),
-                const SizedBox(height: 28),
-                SizedBox(
-                  width: 240,
-                  child: GradientButton('Go back', Icons.arrow_back_rounded, () => Navigator.maybePop(context)),
-                ),
-              ]),
-            ),
+      body: SafeArea(
+        child: Center(
+          child: SingleChildScrollView(
+            padding: const EdgeInsets.all(28),
+            child: Column(mainAxisSize: MainAxisSize.min, children: [
+              Text('404', style: serif(88, color: p.accent, height: 1)),
+              const SizedBox(height: 10),
+              Container(width: 36, height: 3, color: kPri),
+              const SizedBox(height: 18),
+              Text('This page does not exist', style: serif(22)),
+              const SizedBox(height: 12),
+              Pill(routeName, kPri, icon: Icons.link_off_rounded),
+              const SizedBox(height: 12),
+              Text('The app could not open this route. Go back and try another option.',
+                  textAlign: TextAlign.center, style: TextStyle(color: p.sub, height: 1.5)),
+              const SizedBox(height: 28),
+              SizedBox(width: 220, child: PrimaryButton('Go back', Icons.arrow_back_rounded, () => Navigator.maybePop(context))),
+            ]),
           ),
         ),
-      ]),
+      ),
     );
   }
 }
@@ -1441,110 +1001,44 @@ class Shell extends StatefulWidget {
 class _ShellState extends State<Shell> {
   int i = 0;
   static const items = [
-    [Icons.home_rounded, 'Home'],
-    [Icons.calendar_month_rounded, 'Schedule'],
+    [Icons.home_outlined, 'Home'],
+    [Icons.calendar_month_outlined, 'Schedule'],
     [Icons.edit_note_rounded, 'Request'],
     [Icons.grid_view_rounded, 'Services'],
-    [Icons.person_rounded, 'Profile'],
+    [Icons.person_outline_rounded, 'Profile'],
   ];
 
   @override
-  Widget build(BuildContext context) {
-    final p = Pal.of(context);
-    return Scaffold(
-      extendBody: true,
-      backgroundColor: p.bg,
-      body: Stack(fit: StackFit.expand, children: [
-        const Positioned.fill(child: Aurora()),
-        IndexedStack(index: i, children: [
-          HomePage(go: (n) => setState(() => i = n)),
-          const SchedulePage(),
-          const RequestPage(),
-          const ServicesPage(),
-          const ProfilePage(),
-        ]),
-      ]),
-      bottomNavigationBar: MediaQuery.of(context).viewInsets.bottom > 0 ? null : SafeArea(
-        child: Padding(
-          padding: const EdgeInsets.fromLTRB(16, 6, 16, 12),
-          child: Glass(
-            radius: 28,
-            blur: 26,
-            height: 68,
-            opacity: p.dark ? .10 : .55,
-            border: p.dark ? Colors.white.withOpacity(.16) : Colors.white.withOpacity(.85),
-            shadow: true,
-            padding: const EdgeInsets.symmetric(horizontal: 8),
-            child: Row(mainAxisAlignment: MainAxisAlignment.spaceEvenly, children: [
-              for (int n = 0; n < items.length; n++)
-                Semantics(
-                  button: true,
-                  selected: i == n,
-                  label: '${items[n][1]} tab',
-                  child: GestureDetector(
-                    behavior: HitTestBehavior.opaque,
-                    onTap: () => setState(() => i = n),
-                    child: AnimatedContainer(
-                      duration: const Duration(milliseconds: 280),
-                      curve: Curves.easeOutBack,
-                      padding: EdgeInsets.symmetric(horizontal: i == n ? 16 : 12, vertical: 12),
-                      decoration: BoxDecoration(
-                        gradient: i == n ? const LinearGradient(colors: [kPri, kPri2]) : null,
-                        borderRadius: BorderRadius.circular(20),
-                        boxShadow: i == n ? [BoxShadow(color: kPri.withOpacity(.5), blurRadius: 16, offset: const Offset(0, 6))] : null,
-                      ),
-                      child: Row(mainAxisSize: MainAxisSize.min, children: [
-                        Icon(items[n][0] as IconData, size: 22, color: i == n ? Colors.white : p.sub),
-                        if (i == n) ...[
-                          const SizedBox(width: 8),
-                          Text(items[n][1] as String,
-                              style: const TextStyle(color: Colors.white, fontWeight: FontWeight.w700, fontSize: 13)),
-                        ],
-                      ]),
-                    ),
-                  ),
-                ),
-            ]),
-          ),
-        ),
-      ),
-    );
-  }
+  Widget build(BuildContext context) => Scaffold(
+    body: IndexedStack(index: i, children: [
+      HomePage(go: (n) => setState(() => i = n)),
+      const SchedulePage(),
+      const RequestPage(),
+      const ServicesPage(),
+      const ProfilePage(),
+    ]),
+    bottomNavigationBar: NavigationBar(
+      selectedIndex: i,
+      onDestinationSelected: (n) => setState(() => i = n),
+      destinations: [
+        for (final it in items) NavigationDestination(icon: Icon(it[0] as IconData), label: it[1] as String),
+      ],
+    ),
+  );
 }
 
 // ═════════════════════════ HOME (DASHBOARD) ═════════════════════════
-class _RingPainter extends CustomPainter {
-  final double v;
-  final Color color, track;
-  _RingPainter(this.v, this.color, this.track);
-  @override
-  void paint(Canvas canvas, Size size) {
-    final c = size.center(Offset.zero);
-    final r = size.width / 2 - 7;
-    final rect = Rect.fromCircle(center: c, radius: r);
-    final paint = Paint()
-      ..style = PaintingStyle.stroke
-      ..strokeWidth = 12
-      ..strokeCap = StrokeCap.round
-      ..color = track;
-    canvas.drawCircle(c, r, paint);
-    // Gradient arc for the progress ring.
-    paint.shader = SweepGradient(
-      startAngle: -math.pi / 2,
-      endAngle: 3 * math.pi / 2,
-      colors: [color, kPink, color],
-      transform: const GradientRotation(-math.pi / 2),
-    ).createShader(rect);
-    canvas.drawArc(rect, -math.pi / 2, 2 * math.pi * v, false, paint);
-  }
-
-  @override
-  bool shouldRepaint(covariant _RingPainter o) => o.v != v;
-}
-
 class HomePage extends StatelessWidget {
   final void Function(int) go;
   const HomePage({super.key, required this.go});
+
+  Widget _stat(Pal p, String v, String l) => Expanded(
+    child: Column(children: [
+      Text(v, style: serif(26, color: p.accent)),
+      const SizedBox(height: 2),
+      Text(l, style: TextStyle(color: p.sub, fontSize: 12.5)),
+    ]),
+  );
 
   @override
   Widget build(BuildContext context) {
@@ -1555,101 +1049,59 @@ class HomePage extends StatelessWidget {
     final next = today.isNotEmpty ? today.first : classes.first;
 
     return ListView(padding: EdgeInsets.zero, children: [
-      // ── Header (photo + glass) ──
+      // ── Header: photo, app identity, greeting and the next class ──
       PhotoBackdrop(
         url: kImgCampus,
-        seed: 7,
-        radius: 34,
         child: SizedBox(
           width: double.infinity,
           child: SafeArea(
             bottom: false,
             child: Padding(
-              padding: const EdgeInsets.fromLTRB(20, 16, 20, 24),
+              padding: const EdgeInsets.fromLTRB(20, 12, 20, 24),
               child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
                 Row(children: [
-                  const Avatar(48),
+                  const Monogram(40),
                   const SizedBox(width: 12),
                   Expanded(
                     child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-                      Text('$greet • $kCollege', style: const TextStyle(color: Colors.white70, fontSize: 13)),
-                      const Text(kName,
-                          style: TextStyle(color: Colors.white, fontSize: 19, fontWeight: FontWeight.w800)),
+                      Text(kAppName, style: serif(19, color: Colors.white)),
+                      const Text(kTagline, style: TextStyle(color: Colors.white70, fontSize: 12.5)),
                     ]),
                   ),
                   Tap(
                     label: 'Notifications',
-                    onTap: () => showToast(context, 'You have 3 new announcements.', icon: Icons.campaign_rounded),
-                    child: Glass(
-                      radius: 24,
-                      width: 48,
-                      height: 48,
-                      opacity: .18,
-                      child: Stack(alignment: Alignment.center, children: [
-                        const Icon(Icons.notifications_none_rounded, color: Colors.white),
-                        Positioned(
-                          top: 11,
-                          right: 12,
-                          child: Container(
-                              width: 9,
-                              height: 9,
-                              decoration: BoxDecoration(
-                                  color: const Color(0xFFFB7185),
-                                  shape: BoxShape.circle,
-                                  border: Border.all(color: kPri, width: 1.5))),
-                        ),
-                      ]),
+                    onTap: () => showToast(context, 'You have 3 new announcements.'),
+                    child: Container(
+                      width: 46,
+                      height: 46,
+                      decoration: BoxDecoration(shape: BoxShape.circle, border: Border.all(color: Colors.white54)),
+                      child: const Icon(Icons.notifications_none_rounded, color: Colors.white),
                     ),
                   ),
                 ]),
-                const SizedBox(height: 20),
-                Tap(
-                  label: 'Search services',
-                  onTap: () => Navigator.pushNamed(context, AppRoutes.services),
-                  child: Glass(
-                    radius: 16,
-                    height: 50,
-                    opacity: .16,
-                    padding: const EdgeInsets.symmetric(horizontal: 16),
-                    child: const Row(children: [
-                      Icon(Icons.search_rounded, color: Colors.white70),
-                      SizedBox(width: 10),
-                      Text('Search classes, events, services',
-                          style: TextStyle(color: Colors.white70, fontSize: 14)),
-                    ]),
-                  ),
-                ),
+                const SizedBox(height: 34),
+                Eyebrow(greet, color: Colors.white70),
+                const SizedBox(height: 6),
+                Text(kName, style: serif(36, color: Colors.white)),
+                const SizedBox(height: 4),
+                const Text(kProgram, style: TextStyle(color: Colors.white70, fontSize: 13.5)),
                 const SizedBox(height: 22),
                 Tap(
                   label: 'Next class: ${next.name}. Open timetable',
-                  onTap: () => Navigator.pushNamed(context, AppRoutes.timetable),
-                  child: Glass(
-                    radius: 22,
-                    blur: 22,
-                    opacity: .16,
-                    padding: const EdgeInsets.all(18),
+                  onTap: () => openRoute(context, AppRoutes.timetable),
+                  child: BarPanel(
                     child: Row(children: [
                       Expanded(
                         child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-                          const Pill('NEXT CLASS', Colors.white, onDark: true),
-                          const SizedBox(height: 10),
-                          Text(next.name,
-                              style: const TextStyle(color: Colors.white, fontSize: 21, fontWeight: FontWeight.w800)),
+                          Eyebrow('Next class', color: p.accent),
+                          const SizedBox(height: 4),
+                          Text(next.name, style: serif(20)),
                           const SizedBox(height: 4),
                           Text('${next.start} – ${next.end}  •  ${next.room}  •  ${next.who}',
-                              style: const TextStyle(color: Colors.white70, fontSize: 13)),
+                              style: TextStyle(color: p.sub, fontSize: 13)),
                         ]),
                       ),
-                      Container(
-                        width: 44,
-                        height: 44,
-                        decoration: BoxDecoration(
-                          color: Colors.white,
-                          shape: BoxShape.circle,
-                          boxShadow: [BoxShadow(color: Colors.white.withOpacity(.5), blurRadius: 14)],
-                        ),
-                        child: const Icon(Icons.arrow_forward_rounded, color: kPri),
-                      ),
+                      Icon(Icons.arrow_forward_rounded, color: p.accent),
                     ]),
                   ),
                 ),
@@ -1662,320 +1114,205 @@ class HomePage extends StatelessWidget {
       Padding(
         padding: const EdgeInsets.symmetric(horizontal: 20),
         child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-          // ── Reminder banner ──
+          // ── Reminder ──
           const SizedBox(height: 22),
-          Reveal(
-            child: Tap(
-              label: 'Reminder: 2 library books due in 3 days',
-              onTap: () => openService(context, services[0]),
-              child: Container(
-                padding: const EdgeInsets.all(16),
-                decoration: BoxDecoration(
-                  borderRadius: BorderRadius.circular(22),
-                  gradient: const LinearGradient(
-                      colors: [Color(0xFFF97316), kPink, kPri2], begin: Alignment.topLeft, end: Alignment.bottomRight),
-                  boxShadow: [BoxShadow(color: kPink.withOpacity(.4), blurRadius: 22, offset: const Offset(0, 10))],
+          Tap(
+            label: 'Reminder: 2 library books due in 3 days',
+            onTap: () => openService(context, services[0]),
+            child: BarPanel(
+              child: Row(children: [
+                Icon(Icons.alarm_rounded, color: p.accent),
+                const SizedBox(width: 14),
+                const Expanded(
+                  child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+                    Text('2 library books due in 3 days', style: TextStyle(fontWeight: FontWeight.w700, fontSize: 15)),
+                    SizedBox(height: 2),
+                    Text('Tap to renew or reserve a study room', style: TextStyle(fontSize: 12.5)),
+                  ]),
                 ),
-                child: Row(children: [
-                  Container(
-                    width: 46,
-                    height: 46,
-                    decoration: BoxDecoration(color: Colors.white.withOpacity(.22), borderRadius: BorderRadius.circular(15)),
-                    child: const Icon(Icons.alarm_rounded, color: Colors.white),
-                  ),
-                  const SizedBox(width: 14),
-                  const Expanded(
-                    child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-                      Text('2 library books due in 3 days',
-                          style: TextStyle(color: Colors.white, fontWeight: FontWeight.w800, fontSize: 15.5)),
-                      SizedBox(height: 2),
-                      Text('Tap to renew or reserve a study room',
-                          style: TextStyle(color: Colors.white70, fontSize: 12.5)),
-                    ]),
-                  ),
-                  const Icon(Icons.chevron_right_rounded, color: Colors.white),
-                ]),
-              ),
+                Icon(Icons.chevron_right_rounded, color: p.sub),
+              ]),
             ),
           ),
 
           // ── Navigation cards (each opens a NAMED route with Navigator.pushNamed) ──
-          const SectionTitle('Quick access'),
-          Reveal(
-            index: 1,
-            child: Column(children: [
-              Row(children: [
-                Expanded(
-                  child: NavCard(
-                    title: 'Timetable',
-                    sub: '10 classes this week',
-                    img: kImgClass,
-                    icon: Icons.calendar_month_rounded,
-                    grad: kGrads[0],
-                    seed: 1,
-                    onTap: () => Navigator.pushNamed(context, AppRoutes.timetable),
-                  ),
-                ),
-                const SizedBox(width: 14),
-                Expanded(
-                  child: NavCard(
-                    title: 'Services',
-                    sub: '8 campus services',
-                    img: kImgLibrary,
-                    icon: Icons.grid_view_rounded,
-                    grad: kGrads[2],
-                    seed: 2,
-                    onTap: () => Navigator.pushNamed(context, AppRoutes.services),
-                  ),
-                ),
-              ]),
-              const SizedBox(height: 14),
-              Row(children: [
-                Expanded(
-                  child: NavCard(
-                    title: 'Events',
-                    sub: '5 happening soon',
-                    img: kImgStudents,
-                    icon: Icons.celebration_rounded,
-                    grad: kGrads[3],
-                    seed: 3,
-                    onTap: () => Navigator.pushNamed(context, AppRoutes.events),
-                  ),
-                ),
-                const SizedBox(width: 14),
-                Expanded(
-                  child: NavCard(
-                    title: 'Profile',
-                    sub: kId,
-                    img: kImgGrad,
-                    icon: Icons.person_rounded,
-                    grad: kGrads[4],
-                    seed: 4,
-                    onTap: () => Navigator.pushNamed(context, AppRoutes.profile),
-                  ),
-                ),
-              ]),
-            ]),
-          ),
+          const SectionTitle('Explore'),
+          Row(crossAxisAlignment: CrossAxisAlignment.start, children: [
+            Expanded(
+              child: PhotoCard(
+                img: kImgClass,
+                label: 'Open Timetable',
+                imgHeight: 92,
+                onTap: () => openRoute(context, AppRoutes.timetable),
+                caption: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+                  Text('Timetable', style: serif(17)),
+                  const SizedBox(height: 2),
+                  Text('10 classes this week', style: TextStyle(color: p.sub, fontSize: 12.5)),
+                ]),
+              ),
+            ),
+            const SizedBox(width: 14),
+            Expanded(
+              child: PhotoCard(
+                img: kImgLibrary,
+                label: 'Open Services',
+                imgHeight: 92,
+                onTap: () => openRoute(context, AppRoutes.services),
+                caption: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+                  Text('Services', style: serif(17)),
+                  const SizedBox(height: 2),
+                  Text('8 campus services', style: TextStyle(color: p.sub, fontSize: 12.5)),
+                ]),
+              ),
+            ),
+          ]),
+          const SizedBox(height: 14),
+          Row(crossAxisAlignment: CrossAxisAlignment.start, children: [
+            Expanded(
+              child: PhotoCard(
+                img: kImgStudents,
+                label: 'Open Events',
+                imgHeight: 92,
+                onTap: () => openRoute(context, AppRoutes.events),
+                caption: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+                  Text('Events', style: serif(17)),
+                  const SizedBox(height: 2),
+                  Text('5 happening soon', style: TextStyle(color: p.sub, fontSize: 12.5)),
+                ]),
+              ),
+            ),
+            const SizedBox(width: 14),
+            Expanded(
+              child: PhotoCard(
+                img: kImgGrad,
+                label: 'Open Profile',
+                imgHeight: 92,
+                onTap: () => openRoute(context, AppRoutes.profile),
+                caption: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+                  Text('Profile', style: serif(17)),
+                  const SizedBox(height: 2),
+                  Text(kId, maxLines: 1, overflow: TextOverflow.ellipsis, style: TextStyle(color: p.sub, fontSize: 12.5)),
+                ]),
+              ),
+            ),
+          ]),
 
           // ── Academic overview ──
           const SectionTitle('Academic overview'),
-          Reveal(
-            index: 1,
-            child: GlassCard(
-              radius: 22,
-              padding: const EdgeInsets.all(20),
-              child: Row(children: [
-                SizedBox(
-                  width: 100,
-                  height: 100,
-                  child: TweenAnimationBuilder<double>(
-                    tween: Tween(begin: 0, end: .92),
-                    duration: const Duration(milliseconds: 1400),
-                    curve: Curves.easeOutCubic,
-                    builder: (_, v, __) => Stack(alignment: Alignment.center, children: [
-                      CustomPaint(size: const Size(100, 100), painter: _RingPainter(v, kPri, p.soft)),
-                      Column(mainAxisSize: MainAxisSize.min, children: [
-                        Text('${(v * 100).round()}%', style: const TextStyle(fontSize: 22, fontWeight: FontWeight.w800)),
-                        Text('Attendance', style: TextStyle(fontSize: 10.5, color: p.sub)),
-                      ]),
-                    ]),
-                  ),
-                ),
-                const SizedBox(width: 20),
-                Expanded(
-                  child: Column(children: [
-                    _bar(p, 'CGPA', '3.55 / 4.00', .89, const Color(0xFF10B981)),
-                    const SizedBox(height: 16),
-                    _bar(p, 'Credits', '84 / 120', .70, const Color(0xFFF59E0B)),
-                  ]),
-                ),
+          Panel(
+            padding: const EdgeInsets.all(20),
+            child: Column(children: [
+              Row(children: [
+                _stat(p, '92%', 'Attendance'),
+                Container(width: 1, height: 40, color: p.line),
+                _stat(p, '3.55', 'CGPA'),
+                Container(width: 1, height: 40, color: p.line),
+                _stat(p, '84', 'Credits'),
               ]),
-            ),
+              const SizedBox(height: 20),
+              Row(mainAxisAlignment: MainAxisAlignment.spaceBetween, children: [
+                Text('Degree progress', style: TextStyle(color: p.sub, fontSize: 13, fontWeight: FontWeight.w600)),
+                const Text('84 / 120 credits', style: TextStyle(fontSize: 13, fontWeight: FontWeight.w700)),
+              ]),
+              const SizedBox(height: 8),
+              ClipRRect(
+                borderRadius: BorderRadius.circular(3),
+                child: LinearProgressIndicator(value: .7, minHeight: 6, color: p.accent, backgroundColor: p.line),
+              ),
+            ]),
           ),
 
           // ── Today ──
           SectionTitle("Today's classes", action: 'See all', onTap: () => go(1)),
           if (today.isEmpty)
-            Text('No classes today 🎉', style: TextStyle(color: p.sub))
+            Text('No classes today', style: TextStyle(color: p.sub))
           else
             for (int k = 0; k < today.length; k++) ClassCard(today[k], k, highlight: k == 0),
 
-          // ── Popular services (photo carousel) ──
-          SectionTitle('Popular services', action: 'View all', onTap: () => Navigator.pushNamed(context, AppRoutes.services)),
+          SectionTitle('Popular services', action: 'View all', onTap: () => openRoute(context, AppRoutes.services)),
         ]),
       ),
       SizedBox(
-        height: 168,
+        height: 196,
         child: ListView.separated(
-          clipBehavior: Clip.none,
-          padding: const EdgeInsets.fromLTRB(20, 4, 20, 16),
+          padding: const EdgeInsets.symmetric(horizontal: 20),
           scrollDirection: Axis.horizontal,
           itemCount: 5,
           separatorBuilder: (_, __) => const SizedBox(width: 14),
           itemBuilder: (_, k) {
             final s = services[k];
-            return Tap(
-              label: 'Open ${s.name}',
-              onTap: () => openService(context, s),
-              child: Container(
-                width: 160,
-                decoration: BoxDecoration(
-                  borderRadius: BorderRadius.circular(24),
-                  boxShadow: [BoxShadow(color: s.color.withOpacity(.35), blurRadius: 20, offset: const Offset(0, 10))],
-                ),
-                child: ClipRRect(
-                  borderRadius: BorderRadius.circular(24),
-                  child: Stack(fit: StackFit.expand, children: [
-                    NetImage(s.img, [s.color, kDeep], k + 40),
-                    DecoratedBox(
-                      decoration: BoxDecoration(
-                        gradient: LinearGradient(
-                          begin: Alignment.topCenter,
-                          end: Alignment.bottomCenter,
-                          colors: [s.color.withOpacity(.12), kDeep.withOpacity(.85)],
-                        ),
-                      ),
-                    ),
-                    Padding(
-                      padding: const EdgeInsets.all(12),
-                      child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-                        Container(
-                          width: 36,
-                          height: 36,
-                          decoration: BoxDecoration(
-                            color: s.color,
-                            borderRadius: BorderRadius.circular(12),
-                            boxShadow: [BoxShadow(color: s.color.withOpacity(.6), blurRadius: 12)],
-                          ),
-                          child: Icon(s.icon, color: Colors.white, size: 20),
-                        ),
-                        const Spacer(),
-                        Text(s.name,
-                            style: const TextStyle(color: Colors.white, fontSize: 16, fontWeight: FontWeight.w800)),
-                        Text(s.sub,
-                            maxLines: 1,
-                            overflow: TextOverflow.ellipsis,
-                            style: const TextStyle(color: Colors.white70, fontSize: 12)),
-                      ]),
-                    ),
-                  ]),
-                ),
+            return SizedBox(
+              width: 170,
+              child: PhotoCard(
+                img: s.img,
+                label: 'Open ${s.name}',
+                imgHeight: 104,
+                onTap: () => openService(context, s),
+                caption: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+                  Text(s.name, style: serif(16)),
+                  const SizedBox(height: 2),
+                  Text(s.sub, maxLines: 1, overflow: TextOverflow.ellipsis, style: TextStyle(color: p.sub, fontSize: 12.5)),
+                ]),
               ),
             );
           },
         ),
       ),
 
-      // ── Events ──
       Padding(
         padding: const EdgeInsets.symmetric(horizontal: 20),
-        child: SectionTitle('Upcoming events', action: 'View all', onTap: () => Navigator.pushNamed(context, AppRoutes.events)),
+        child: SectionTitle('Upcoming events', action: 'View all', onTap: () => openRoute(context, AppRoutes.events)),
       ),
       SizedBox(
-        height: 196,
+        height: 222,
         child: ListView.separated(
-          clipBehavior: Clip.none,
-          padding: const EdgeInsets.fromLTRB(20, 4, 20, 16),
+          padding: const EdgeInsets.symmetric(horizontal: 20),
           scrollDirection: Axis.horizontal,
           itemCount: events.length,
           separatorBuilder: (_, __) => const SizedBox(width: 14),
-          itemBuilder: (_, i) => Tap(
-            label: 'Open ${events[i].title}',
-            onTap: () async {
-              final reg = await openEventDetail(context, i);
-              if (reg && context.mounted) {
-                showToast(context, 'Registered for ${events[i].title}', icon: Icons.check_circle_rounded);
-              }
-            },
-            child: SizedBox(
-              width: 262,
-              child: EventPhoto(
-                e: events[i],
-                i: i,
-                child: Padding(
-                  padding: const EdgeInsets.all(12),
-                  child: Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
-                    Align(alignment: Alignment.centerLeft, child: Pill(events[i].cat, Colors.white, onDark: true)),
-                    const Spacer(),
-                    Glass(
-                      radius: 16,
-                      blur: 14,
-                      tint: Colors.black,
-                      opacity: .26,
-                      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
-                      child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-                        Text(events[i].title,
-                            maxLines: 1,
-                            overflow: TextOverflow.ellipsis,
-                            style: const TextStyle(color: Colors.white, fontSize: 16, fontWeight: FontWeight.w800)),
-                        const SizedBox(height: 2),
-                        Text(events[i].date, style: const TextStyle(color: Colors.white70, fontSize: 12.5)),
-                      ]),
-                    ),
-                  ]),
-                ),
-              ),
+          itemBuilder: (_, i) => SizedBox(
+            width: 260,
+            child: PhotoCard(
+              img: events[i].img,
+              label: 'Open ${events[i].title}',
+              imgHeight: 112,
+              onTap: () async {
+                final reg = await openEventDetail(context, i);
+                if (reg && context.mounted) showToast(context, 'Registered for ${events[i].title}');
+              },
+              caption: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+                Eyebrow('${events[i].cat}  •  ${events[i].date}', color: p.accent),
+                const SizedBox(height: 6),
+                Text(events[i].title, maxLines: 1, overflow: TextOverflow.ellipsis, style: serif(17)),
+                const SizedBox(height: 3),
+                Text(events[i].venue, style: TextStyle(color: p.sub, fontSize: 12.5)),
+              ]),
             ),
           ),
         ),
       ),
 
-      // ── Notices ──
+      // ── Notices: simple text list separated by hairlines ──
       Padding(
-        padding: const EdgeInsets.fromLTRB(20, 0, 20, 120),
+        padding: const EdgeInsets.fromLTRB(20, 0, 20, 32),
         child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
           const SectionTitle('Announcements'),
-          for (int k = 0; k < notices.length; k++)
-            Reveal(
-              index: k,
-              child: Padding(
-                padding: const EdgeInsets.only(bottom: 12),
-                child: GlassCard(
-                  child: Row(children: [
-                    Container(
-                      width: 46,
-                      height: 46,
-                      decoration: BoxDecoration(
-                        gradient: LinearGradient(colors: [kGrads[k][0].withOpacity(.2), kGrads[k][1].withOpacity(.12)]),
-                        borderRadius: BorderRadius.circular(15),
-                      ),
-                      child: Icon(Icons.campaign_rounded, color: kGrads[k][0]),
-                    ),
-                    const SizedBox(width: 14),
-                    Expanded(
-                      child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-                        Text(notices[k][0], style: const TextStyle(fontWeight: FontWeight.w700, height: 1.3)),
-                        const SizedBox(height: 4),
-                        Text('${notices[k][1]} • ${notices[k][2]}', style: TextStyle(color: p.sub, fontSize: 12.5)),
-                      ]),
-                    ),
-                  ]),
-                ),
-              ),
+          Divider(height: 1, color: p.line),
+          for (final n in notices) ...[
+            Padding(
+              padding: const EdgeInsets.symmetric(vertical: 16),
+              child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+                Eyebrow('${n[1]}  •  ${n[2]}', color: p.accent),
+                const SizedBox(height: 6),
+                Text(n[0], style: serif(17, w: FontWeight.w600, height: 1.3)),
+              ]),
             ),
+            Divider(height: 1, color: p.line),
+          ],
         ]),
       ),
     ]);
   }
-
-  Widget _bar(Pal p, String label, String value, double v, Color c) => Column(children: [
-    Row(mainAxisAlignment: MainAxisAlignment.spaceBetween, children: [
-      Text(label, style: TextStyle(color: p.sub, fontWeight: FontWeight.w600, fontSize: 13)),
-      Text(value, style: const TextStyle(fontWeight: FontWeight.w800, fontSize: 13)),
-    ]),
-    const SizedBox(height: 8),
-    ClipRRect(
-      borderRadius: BorderRadius.circular(8),
-      child: TweenAnimationBuilder<double>(
-        tween: Tween(begin: 0, end: v),
-        duration: const Duration(milliseconds: 1200),
-        curve: Curves.easeOutCubic,
-        builder: (_, val, __) =>
-            LinearProgressIndicator(value: val, minHeight: 8, color: c, backgroundColor: c.withOpacity(.14)),
-      ),
-    ),
-  ]);
 }
 
 // ═════════════════════════ SCHEDULE ═════════════════════════
@@ -1997,7 +1334,7 @@ class _SchedulePageState extends State<SchedulePage> {
     final mon = now.subtract(Duration(days: now.weekday - 1));
     final list = classes.where((c) => c.day == day).toList();
     return Column(children: [
-      PageHeader('Schedule', '${months[now.month - 1]} ${now.year}', kImgClass, seed: 4),
+      PageHeader('Schedule', '${months[now.month - 1]} ${now.year}', kImgClass),
       Padding(
         padding: const EdgeInsets.fromLTRB(16, 20, 16, 8),
         child: Row(
@@ -2009,22 +1346,19 @@ class _SchedulePageState extends State<SchedulePage> {
                 label: '${names[i]} ${d.day}',
                 onTap: () => setState(() => day = i),
                 child: AnimatedContainer(
-                  duration: const Duration(milliseconds: 250),
+                  duration: const Duration(milliseconds: 200),
                   margin: const EdgeInsets.symmetric(horizontal: 4),
-                  padding: const EdgeInsets.symmetric(vertical: 14),
+                  padding: const EdgeInsets.symmetric(vertical: 13),
                   decoration: BoxDecoration(
-                    gradient: sel ? const LinearGradient(colors: [kPri, kPri2]) : null,
-                    color: sel ? null : p.card.withOpacity(p.dark ? .5 : .7),
-                    borderRadius: BorderRadius.circular(18),
-                    border: sel ? null : Border.all(color: p.line),
-                    boxShadow: sel ? [BoxShadow(color: kPri.withOpacity(.45), blurRadius: 16, offset: const Offset(0, 6))] : null,
+                    color: sel ? kPri : p.card,
+                    borderRadius: BorderRadius.circular(6),
+                    border: Border.all(color: sel ? kPri : p.line),
                   ),
                   child: Column(children: [
                     Text(names[i],
-                        style: TextStyle(fontSize: 11.5, fontWeight: FontWeight.w700, color: sel ? Colors.white70 : p.sub)),
-                    const SizedBox(height: 6),
-                    Text('${d.day}',
-                        style: TextStyle(fontSize: 19, fontWeight: FontWeight.w800, color: sel ? Colors.white : p.text)),
+                        style: TextStyle(fontSize: 11.5, fontWeight: FontWeight.w700, letterSpacing: 1, color: sel ? Colors.white70 : p.sub)),
+                    const SizedBox(height: 5),
+                    Text('${d.day}', style: serif(20, color: sel ? Colors.white : p.text)),
                   ]),
                 ),
               ),
@@ -2034,18 +1368,44 @@ class _SchedulePageState extends State<SchedulePage> {
       ),
       Expanded(
         child: AnimatedSwitcher(
-          duration: const Duration(milliseconds: 300),
+          duration: const Duration(milliseconds: 250),
           child: ListView(
             key: ValueKey(day),
-            padding: const EdgeInsets.fromLTRB(20, 12, 20, 120),
+            padding: const EdgeInsets.fromLTRB(20, 12, 20, 32),
             children: list.isEmpty
-                ? [Padding(padding: const EdgeInsets.only(top: 60), child: Center(child: Text('No classes 🎉', style: TextStyle(color: p.sub, fontSize: 16))))]
+                ? [Padding(padding: const EdgeInsets.only(top: 60), child: Center(child: Text('No classes', style: TextStyle(color: p.sub, fontSize: 16))))]
                 : [for (int k = 0; k < list.length; k++) ClassCard(list[k], k, highlight: day == todayIdx() && k == 0)],
           ),
         ),
       ),
     ]);
   }
+}
+
+class PageHeader extends StatelessWidget {
+  final String title, sub, img;
+  final Widget? extra;
+  const PageHeader(this.title, this.sub, this.img, {super.key, this.extra});
+  @override
+  Widget build(BuildContext context) => PhotoBackdrop(
+    url: img,
+    child: SizedBox(
+      width: double.infinity,
+      child: SafeArea(
+        bottom: false,
+        child: Padding(
+          padding: const EdgeInsets.fromLTRB(22, 16, 22, 26),
+          child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+            SizedBox(height: backGap(context)),
+            Text(title, style: serif(34, color: Colors.white)),
+            const SizedBox(height: 6),
+            Text(sub, style: const TextStyle(color: Colors.white70, fontSize: 14.5)),
+            if (extra != null) ...[const SizedBox(height: 18), extra!],
+          ]),
+        ),
+      ),
+    ),
+  );
 }
 
 // ═════════════════════════ EVENTS ═════════════════════════
@@ -2061,9 +1421,7 @@ class _EventsPageState extends State<EventsPage> {
 
   void _toggle(int i) {
     setState(() => going.contains(i) ? going.remove(i) : going.add(i));
-    if (going.contains(i)) {
-      showToast(context, 'Registered for ${events[i].title}', icon: Icons.check_circle_rounded);
-    }
+    if (going.contains(i)) showToast(context, 'Registered for ${events[i].title}');
   }
 
   Future<void> _open(int i) async {
@@ -2071,7 +1429,7 @@ class _EventsPageState extends State<EventsPage> {
     if (!mounted) return;
     if (reg) {
       setState(() => going.add(i));
-      showToast(context, 'Registered for ${events[i].title}', icon: Icons.check_circle_rounded);
+      showToast(context, 'Registered for ${events[i].title}');
     }
   }
 
@@ -2080,9 +1438,9 @@ class _EventsPageState extends State<EventsPage> {
     final p = Pal.of(context);
     final cats = ['All', ...{for (final e in events) e.cat}];
     return Column(children: [
-      PageHeader('Events', "Discover what's happening at AVIT", kImgGrad, seed: 9),
+      PageHeader('Events', "What's happening at $kCollege", kImgGrad),
       SizedBox(
-        height: 66,
+        height: 68,
         child: ListView.separated(
           padding: const EdgeInsets.all(14),
           scrollDirection: Axis.horizontal,
@@ -2093,16 +1451,13 @@ class _EventsPageState extends State<EventsPage> {
             return Tap(
               label: 'Filter ${cats[i]}',
               onTap: () => setState(() => filter = cats[i]),
-              child: AnimatedContainer(
-                duration: const Duration(milliseconds: 200),
-                padding: const EdgeInsets.symmetric(horizontal: 20),
+              child: Container(
+                padding: const EdgeInsets.symmetric(horizontal: 18),
                 alignment: Alignment.center,
                 decoration: BoxDecoration(
-                  gradient: sel ? const LinearGradient(colors: [kPri, kPri2]) : null,
-                  color: sel ? null : p.card.withOpacity(p.dark ? .5 : .7),
-                  borderRadius: BorderRadius.circular(30),
-                  border: sel ? null : Border.all(color: p.line),
-                  boxShadow: sel ? [BoxShadow(color: kPri.withOpacity(.4), blurRadius: 14, offset: const Offset(0, 5))] : null,
+                  color: sel ? kPri : p.card,
+                  borderRadius: BorderRadius.circular(6),
+                  border: Border.all(color: sel ? kPri : p.line),
                 ),
                 child: Text(cats[i], style: TextStyle(fontWeight: FontWeight.w700, color: sel ? Colors.white : p.sub)),
               ),
@@ -2111,77 +1466,55 @@ class _EventsPageState extends State<EventsPage> {
         ),
       ),
       Expanded(
-        child: ListView(padding: const EdgeInsets.fromLTRB(20, 4, 20, 120), children: [
+        child: ListView(padding: const EdgeInsets.fromLTRB(20, 4, 20, 32), children: [
           for (int i = 0; i < events.length; i++)
             if (filter == 'All' || events[i].cat == filter)
               Reveal(
                 index: i,
-                child: Tap(
-                  label: 'Open ${events[i].title}',
-                  onTap: () => _open(i), // direct Navigator.push to the event details route
-                  child: Container(
-                    height: 252,
-                    margin: const EdgeInsets.only(bottom: 18),
-                    child: EventPhoto(
-                      e: events[i],
-                      i: i,
-                      child: Padding(
-                        padding: const EdgeInsets.all(14),
-                        child: Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
-                          Row(children: [
-                            Pill(events[i].cat, Colors.white, onDark: true),
-                            const Spacer(),
-                            Glass(
-                              radius: 20,
-                              width: 40,
-                              height: 40,
-                              opacity: .2,
-                              child: Center(child: Icon(events[i].icon, color: Colors.white, size: 20)),
-                            ),
-                          ]),
-                          const Spacer(),
-                          Glass(
-                            radius: 20,
-                            blur: 16,
-                            tint: Colors.black,
-                            opacity: .28,
-                            padding: const EdgeInsets.all(14),
-                            child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-                              Text(events[i].title,
-                                  style: const TextStyle(color: Colors.white, fontSize: 20, fontWeight: FontWeight.w800, letterSpacing: -.3)),
-                              const SizedBox(height: 6),
-                              Row(children: [
-                                const Icon(Icons.schedule_rounded, color: Colors.white70, size: 15),
-                                const SizedBox(width: 5),
-                                Text(events[i].date, style: const TextStyle(color: Colors.white70, fontSize: 12.5)),
-                                const SizedBox(width: 12),
-                                const Icon(Icons.place_outlined, color: Colors.white70, size: 15),
-                                const SizedBox(width: 4),
-                                Expanded(child: Text(events[i].venue, overflow: TextOverflow.ellipsis, style: const TextStyle(color: Colors.white70, fontSize: 12.5))),
-                              ]),
-                              const SizedBox(height: 10),
-                              Row(children: [
-                                Text(events[i].going, style: const TextStyle(color: Colors.white, fontWeight: FontWeight.w700)),
-                                const Spacer(),
-                                Tap(
-                                  label: going.contains(i) ? 'Registered' : 'Register for ${events[i].title}',
-                                  onTap: () => _toggle(i),
-                                  child: AnimatedContainer(
-                                    duration: const Duration(milliseconds: 250),
-                                    padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
-                                    decoration: BoxDecoration(
-                                      color: going.contains(i) ? const Color(0xFF22C55E) : Colors.white,
-                                      borderRadius: BorderRadius.circular(14),
-                                    ),
-                                    child: Text(going.contains(i) ? '✓ Going' : 'Register',
-                                        style: TextStyle(fontWeight: FontWeight.w800, color: going.contains(i) ? Colors.white : kPri)),
-                                  ),
-                                ),
-                              ]),
+                child: Padding(
+                  padding: const EdgeInsets.only(bottom: 18),
+                  child: Tap(
+                    label: 'Open ${events[i].title}',
+                    onTap: () => _open(i), // direct Navigator.push to the event details route
+                    child: Panel(
+                      padding: EdgeInsets.zero,
+                      child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+                        SizedBox(height: 170, width: double.infinity, child: NetImage(events[i].img)),
+                        Container(height: 3, color: kPri),
+                        Padding(
+                          padding: const EdgeInsets.all(16),
+                          child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+                            Eyebrow('${events[i].cat}  •  ${events[i].date}', color: p.accent),
+                            const SizedBox(height: 8),
+                            Text(events[i].title, style: serif(22, height: 1.2)),
+                            const SizedBox(height: 8),
+                            Row(children: [
+                              Icon(Icons.place_outlined, size: 16, color: p.sub),
+                              const SizedBox(width: 5),
+                              Expanded(child: Text(events[i].venue, style: TextStyle(color: p.sub, fontSize: 13.5))),
                             ]),
-                          ),
-                        ]),
-                      ),
+                            const SizedBox(height: 14),
+                            Row(children: [
+                              Text(events[i].going, style: const TextStyle(fontWeight: FontWeight.w700)),
+                              const Spacer(),
+                              Tap(
+                                label: going.contains(i) ? 'Registered' : 'Register for ${events[i].title}',
+                                onTap: () => _toggle(i),
+                                child: Container(
+                                  padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
+                                  decoration: BoxDecoration(
+                                    color: going.contains(i) ? Colors.transparent : kPri,
+                                    borderRadius: BorderRadius.circular(6),
+                                    border: Border.all(color: going.contains(i) ? kSuccess : kPri),
+                                  ),
+                                  child: Text(going.contains(i) ? '✓ Going' : 'Register',
+                                      style: TextStyle(fontWeight: FontWeight.w800, color: going.contains(i) ? kSuccess : Colors.white)),
+                                ),
+                              ),
+                            ]),
+                          ]),
+                        ),
+                      ]),
                     ),
                   ),
                 ),
@@ -2208,26 +1541,24 @@ class _ServicesPageState extends State<ServicesPage> {
     return Column(children: [
       PageHeader(
         'Services',
-        'Everything you need, one tap away',
+        'Everything you need, in one place',
         kImgLibrary,
-        seed: 15,
-        extra: Glass(
-          radius: 16,
-          height: 48,
-          opacity: .16,
-          padding: const EdgeInsets.symmetric(horizontal: 16),
+        extra: Container(
+          height: 50,
+          padding: const EdgeInsets.symmetric(horizontal: 14),
+          decoration: BoxDecoration(color: Colors.white, borderRadius: BorderRadius.circular(6)),
           child: Row(children: [
-            const Icon(Icons.search_rounded, color: Colors.white70),
+            const Icon(Icons.search_rounded, color: Color(0xFF5E5E63)),
             const SizedBox(width: 10),
             Expanded(
               child: TextField(
                 onChanged: (v) => setState(() => q = v),
-                cursorColor: Colors.white,
-                style: const TextStyle(color: Colors.white),
+                cursorColor: kPri,
+                style: const TextStyle(color: kInk, fontSize: 15.5),
                 decoration: const InputDecoration(
                   border: InputBorder.none,
                   hintText: 'Search services',
-                  hintStyle: TextStyle(color: Colors.white70),
+                  hintStyle: TextStyle(color: Color(0xFF6E6E73)),
                 ),
               ),
             ),
@@ -2238,19 +1569,26 @@ class _ServicesPageState extends State<ServicesPage> {
         child: list.isEmpty
             ? Center(child: Text('No services match "$q"', style: TextStyle(color: p.sub, fontSize: 16)))
             : GridView.builder(
-          padding: const EdgeInsets.fromLTRB(20, 20, 20, 120),
+          padding: const EdgeInsets.fromLTRB(20, 20, 20, 32),
           itemCount: list.length,
           gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
-              crossAxisCount: 2, mainAxisSpacing: 14, crossAxisSpacing: 14, childAspectRatio: .9),
+              crossAxisCount: 2, mainAxisSpacing: 14, crossAxisSpacing: 14, childAspectRatio: .86),
           itemBuilder: (_, i) {
             final s = list[i];
             return Reveal(
               index: i,
-              child: Tap(
+              // Selected CampusService travels to the details route as an argument.
+              child: PhotoCard(
+                img: s.img,
+                heroTag: 'svc-img-${s.name}',
                 label: 'Open ${s.name}',
-                // Selected CampusService travels to the details route as an argument.
+                imgHeight: 104,
                 onTap: () => openService(context, s),
-                child: ServiceCard(s),
+                caption: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+                  Text(s.name, maxLines: 1, overflow: TextOverflow.ellipsis, style: serif(17)),
+                  const SizedBox(height: 2),
+                  Text(s.sub, maxLines: 1, overflow: TextOverflow.ellipsis, style: TextStyle(color: p.sub, fontSize: 12.5)),
+                ]),
               ),
             );
           },
@@ -2264,32 +1602,13 @@ class _ServicesPageState extends State<ServicesPage> {
 class ProfilePage extends StatelessWidget {
   const ProfilePage({super.key});
 
-  Widget _stat(Pal p, String v, String l, List<Color> g) => Expanded(
-    child: GlassCard(
-      padding: const EdgeInsets.symmetric(vertical: 18),
-      child: Column(children: [
-        ShaderMask(
-          shaderCallback: (r) => LinearGradient(colors: g).createShader(r),
-          child: Text(v, style: const TextStyle(fontSize: 24, fontWeight: FontWeight.w900, color: Colors.white)),
-        ),
-        const SizedBox(height: 2),
-        Text(l, style: TextStyle(color: p.sub, fontSize: 12.5)),
-      ]),
-    ),
-  );
-
-  Widget _tile(Pal p, IconData i, Color c, String t, Widget trailing, {VoidCallback? onTap}) => Tap(
+  Widget _tile(Pal p, IconData i, String t, Widget trailing, {VoidCallback? onTap}) => Tap(
     label: t,
     onTap: onTap,
     child: Padding(
-      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 15),
       child: Row(children: [
-        Container(
-          width: 42,
-          height: 42,
-          decoration: BoxDecoration(color: c.withOpacity(.13), borderRadius: BorderRadius.circular(13)),
-          child: Icon(i, color: c, size: 21),
-        ),
+        Icon(i, color: p.accent, size: 22),
         const SizedBox(width: 14),
         Expanded(child: Text(t, style: const TextStyle(fontWeight: FontWeight.w600, fontSize: 15))),
         trailing,
@@ -2304,8 +1623,6 @@ class ProfilePage extends StatelessWidget {
     return ListView(padding: EdgeInsets.zero, children: [
       PhotoBackdrop(
         url: kImgGrad,
-        seed: 21,
-        radius: 32,
         child: SizedBox(
           width: double.infinity,
           child: SafeArea(
@@ -2314,9 +1631,9 @@ class ProfilePage extends StatelessWidget {
               padding: const EdgeInsets.fromLTRB(20, 24, 20, 30),
               child: Column(children: [
                 SizedBox(height: backGap(context) * .6),
-                const Avatar(92),
+                const Avatar(88),
                 const SizedBox(height: 14),
-                const Text(kName, style: TextStyle(color: Colors.white, fontSize: 24, fontWeight: FontWeight.w800)),
+                Text(kName, style: serif(28, color: Colors.white)),
                 const SizedBox(height: 4),
                 const Text(kProgram, textAlign: TextAlign.center, style: TextStyle(color: Colors.white70)),
                 const SizedBox(height: 12),
@@ -2327,36 +1644,23 @@ class ProfilePage extends StatelessWidget {
         ),
       ),
       Padding(
-        padding: const EdgeInsets.fromLTRB(20, 20, 20, 120),
+        padding: const EdgeInsets.fromLTRB(20, 20, 20, 32),
         child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-          Reveal(
-            child: Row(children: [
-              _stat(p, '3.55', 'CGPA', const [kPri, kPri2]),
-              const SizedBox(width: 12),
-              _stat(p, '92%', 'Attendance', const [Color(0xFF10B981), kCyan]),
-              const SizedBox(width: 12),
-              _stat(p, '84', 'Credits', const [Color(0xFFF59E0B), kPink]),
+          Panel(
+            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
+            child: Column(children: [
+              detailRow(p, Icons.school_outlined, 'Programme', 'B.Sc. Computer Science, Year 2'),
+              Divider(height: 1, color: p.line),
+              detailRow(p, Icons.mail_outline_rounded, 'Campus email', kEmail),
+              Divider(height: 1, color: p.line),
+              detailRow(p, Icons.badge_outlined, 'Student ID', kId),
             ]),
-          ),
-          const SizedBox(height: 16),
-          Reveal(
-            index: 1,
-            child: GlassCard(
-              radius: 22,
-              padding: const EdgeInsets.fromLTRB(18, 8, 18, 8),
-              child: Column(children: [
-                detailRow(p, Icons.school_outlined, kPri, 'Programme', 'B.Sc. Computer Science, Year 2'),
-                Divider(height: 1, color: p.line),
-                detailRow(p, Icons.mail_outline_rounded, const Color(0xFF10B981), 'Campus email', kEmail),
-              ]),
-            ),
           ),
           const SectionTitle('Campus moments'),
           SizedBox(
-            height: 118,
+            height: 112,
             child: ListView(
               scrollDirection: Axis.horizontal,
-              clipBehavior: Clip.none,
               children: [
                 for (final m in [
                   [kImgCampus, 'Campus'],
@@ -2369,23 +1673,22 @@ class ProfilePage extends StatelessWidget {
                     child: SizedBox(
                       width: 150,
                       child: ClipRRect(
-                        borderRadius: BorderRadius.circular(20),
+                        borderRadius: BorderRadius.circular(6),
                         child: Stack(fit: StackFit.expand, children: [
-                          NetImage(m[0], const [kPri, kPri2], m[1].length),
-                          DecoratedBox(
+                          NetImage(m[0]),
+                          const DecoratedBox(
                             decoration: BoxDecoration(
                               gradient: LinearGradient(
-                                begin: Alignment.topCenter,
+                                begin: Alignment.center,
                                 end: Alignment.bottomCenter,
-                                colors: [Colors.transparent, kDeep.withOpacity(.85)],
+                                colors: [Colors.transparent, Color(0xB3000000)],
                               ),
                             ),
                           ),
                           Positioned(
                             left: 12,
                             bottom: 10,
-                            child: Text(m[1],
-                                style: const TextStyle(color: Colors.white, fontWeight: FontWeight.w800)),
+                            child: Text(m[1], style: serif(15, color: Colors.white)),
                           ),
                         ]),
                       ),
@@ -2395,49 +1698,44 @@ class ProfilePage extends StatelessWidget {
             ),
           ),
           const SectionTitle('Settings'),
-          Reveal(
-            index: 2,
-            child: GlassCard(
-              padding: EdgeInsets.zero,
-              radius: 22,
-              child: Column(children: [
-                _tile(p, Icons.person_outline_rounded, kPri, 'Edit profile', chevron,
-                    onTap: () => showToast(context, 'Profile editing is coming soon.')),
-                Divider(height: 1, color: p.line),
-                _tile(p, Icons.edit_note_rounded, kPink, 'Raise a service request', chevron,
-                    onTap: () => Navigator.pushNamed(context, AppRoutes.request)),
-                Divider(height: 1, color: p.line),
-                _tile(p, Icons.notifications_none_rounded, const Color(0xFFF59E0B), 'Notifications', chevron,
-                    onTap: () => showToast(context, 'Notifications are switched on.', icon: Icons.notifications_active_rounded)),
-                Divider(height: 1, color: p.line),
-                _tile(
-                  p,
-                  Icons.dark_mode_outlined,
-                  const Color(0xFF8B5CF6),
-                  'Dark mode',
-                  ValueListenableBuilder<ThemeMode>(
-                    valueListenable: themeMode,
-                    builder: (_, m, __) => Switch(
-                      value: m == ThemeMode.dark,
-                      activeColor: kPri,
-                      onChanged: (v) => themeMode.value = v ? ThemeMode.dark : ThemeMode.light,
-                    ),
+          Panel(
+            padding: EdgeInsets.zero,
+            child: Column(children: [
+              _tile(p, Icons.person_outline_rounded, 'Edit profile', chevron,
+                  onTap: () => showToast(context, 'Profile editing is coming soon.')),
+              Divider(height: 1, color: p.line),
+              _tile(p, Icons.edit_note_rounded, 'Raise a service request', chevron,
+                  onTap: () => openRoute(context, AppRoutes.request)),
+              Divider(height: 1, color: p.line),
+              _tile(p, Icons.notifications_none_rounded, 'Notifications', chevron,
+                  onTap: () => showToast(context, 'Notifications are switched on.')),
+              Divider(height: 1, color: p.line),
+              _tile(
+                p,
+                Icons.dark_mode_outlined,
+                'Dark mode',
+                ValueListenableBuilder<ThemeMode>(
+                  valueListenable: themeMode,
+                  builder: (_, m, __) => Switch(
+                    value: m == ThemeMode.dark,
+                    activeColor: kPri,
+                    onChanged: (v) => themeMode.value = v ? ThemeMode.dark : ThemeMode.light,
                   ),
-                  onTap: () => themeMode.value = themeMode.value == ThemeMode.dark ? ThemeMode.light : ThemeMode.dark,
                 ),
-                Divider(height: 1, color: p.line),
-                _tile(p, Icons.language_rounded, kCyan, 'Language',
-                    Text('English', style: TextStyle(color: p.sub, fontWeight: FontWeight.w600)),
-                    onTap: () => showToast(context, 'English is the only language available.')),
-                Divider(height: 1, color: p.line),
-                _tile(p, Icons.help_outline_rounded, const Color(0xFF10B981), 'Help & support', chevron,
-                    onTap: () => openService(context, services[7])),
-                Divider(height: 1, color: p.line),
-                // Test hook for the unknown-route fallback (test case T8).
-                _tile(p, Icons.link_off_rounded, const Color(0xFFEF4444), 'Test unknown route', chevron,
-                    onTap: () => Navigator.pushNamed(context, '/does-not-exist')),
-              ]),
-            ),
+                onTap: () => themeMode.value = themeMode.value == ThemeMode.dark ? ThemeMode.light : ThemeMode.dark,
+              ),
+              Divider(height: 1, color: p.line),
+              _tile(p, Icons.language_rounded, 'Language',
+                  Text('English', style: TextStyle(color: p.sub, fontWeight: FontWeight.w600)),
+                  onTap: () => showToast(context, 'English is the only language available.')),
+              Divider(height: 1, color: p.line),
+              _tile(p, Icons.help_outline_rounded, 'Help & support', chevron,
+                  onTap: () => openService(context, services[7])),
+              Divider(height: 1, color: p.line),
+              // Test hook for the unknown-route fallback (test case T8).
+              _tile(p, Icons.link_off_rounded, 'Test unknown route', chevron,
+                  onTap: () => Navigator.pushNamed(context, '/does-not-exist')),
+            ]),
           ),
         ]),
       ),
@@ -2446,7 +1744,7 @@ class ProfilePage extends StatelessWidget {
 }
 
 // ═════════════════════════ SERVICE REQUEST FORM ═════════════════════════
-// Colour system: primary kPri, accent kPri2, field fill = Pal.soft, error / success below.
+// Colour system: primary kPri (crimson), field fill = Pal.soft, error / success below.
 const kError = Color(0xFFE11D48);
 const kSuccess = Color(0xFF16A34A);
 const kDomain = '@avit.edu'; // campus email domain
@@ -2478,11 +1776,11 @@ String fmtDate(DateTime d) => '${d.day} ${kMonthsShort[d.month - 1]} ${d.year}';
 /// One consistent input style for every field (borders, focus colour, error style, icons).
 InputDecoration campusDecoration(Pal p, {required String label, String? hint, IconData? icon}) {
   OutlineInputBorder border(Color c, [double w = 1.2]) => OutlineInputBorder(
-      borderRadius: BorderRadius.circular(16), borderSide: BorderSide(color: c, width: w));
+      borderRadius: BorderRadius.circular(8), borderSide: BorderSide(color: c, width: w));
   return InputDecoration(
     labelText: label,
     hintText: hint,
-    prefixIcon: icon == null ? null : Icon(icon, color: kPri),
+    prefixIcon: icon == null ? null : Icon(icon, color: p.accent),
     filled: true,
     fillColor: p.soft,
     labelStyle: TextStyle(color: p.sub, fontSize: 15),
@@ -2492,7 +1790,7 @@ InputDecoration campusDecoration(Pal p, {required String label, String? hint, Ic
     contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 16),
     border: border(p.line),
     enabledBorder: border(p.line),
-    focusedBorder: border(kPri, 2),
+    focusedBorder: border(p.accent, 2),
     errorBorder: border(kError),
     focusedErrorBorder: border(kError, 2),
   );
@@ -2815,7 +2113,7 @@ class _RequestPageState extends State<RequestPage> {
         );
         return AlertDialog(
           backgroundColor: p.card,
-          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(26)),
+          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
           icon: const Icon(Icons.check_circle_rounded, color: kSuccess, size: 60),
           title: const Text('Request received!', textAlign: TextAlign.center),
           content: SingleChildScrollView(
@@ -2847,7 +2145,7 @@ class _RequestPageState extends State<RequestPage> {
               style: FilledButton.styleFrom(
                 backgroundColor: kPri,
                 minimumSize: const Size(180, 50),
-                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
+                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(6)),
               ),
               onPressed: () {
                 Navigator.pop(ctx);
@@ -2864,8 +2162,8 @@ class _RequestPageState extends State<RequestPage> {
 
   Widget _section(Pal p, String title, IconData icon, List<Widget> kids) => Padding(
     padding: const EdgeInsets.only(bottom: 16),
-    child: GlassCard(
-      radius: 22,
+    child: Panel(
+      radius: 8,
       padding: const EdgeInsets.fromLTRB(16, 16, 16, 4),
       child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
         Row(children: [
@@ -2873,8 +2171,8 @@ class _RequestPageState extends State<RequestPage> {
             width: 36,
             height: 36,
             decoration: BoxDecoration(
-              gradient: LinearGradient(colors: [kPri.withOpacity(.2), kPri2.withOpacity(.12)]),
-              borderRadius: BorderRadius.circular(12),
+              color: kPri.withOpacity(.10),
+              borderRadius: BorderRadius.circular(6),
             ),
             child: Icon(icon, color: kPri, size: 20),
           ),
@@ -2902,8 +2200,6 @@ class _RequestPageState extends State<RequestPage> {
           // ── App header: name, form title, icon and short instruction ──
           PhotoBackdrop(
             url: kImgLibrary,
-            seed: 31,
-            radius: 32,
             child: SizedBox(
               width: double.infinity,
               child: SafeArea(
@@ -2913,12 +2209,15 @@ class _RequestPageState extends State<RequestPage> {
                   child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
                     SizedBox(height: backGap(context)),
                     Row(children: [
-                      Glass(
-                        radius: 16,
+                      Container(
                         width: 48,
                         height: 48,
-                        opacity: .2,
-                        child: const Center(child: Icon(Icons.support_agent_rounded, color: Colors.white, size: 26)),
+                        decoration: BoxDecoration(
+                          color: Colors.white.withOpacity(.16),
+                          borderRadius: BorderRadius.circular(6),
+                          border: Border.all(color: Colors.white.withOpacity(.4)),
+                        ),
+                        child: const Icon(Icons.support_agent_rounded, color: Colors.white, size: 26),
                       ),
                       const SizedBox(width: 12),
                       const Expanded(
@@ -2929,7 +2228,7 @@ class _RequestPageState extends State<RequestPage> {
                     const SizedBox(height: 14),
                     const Text('Student Service Request',
                         style: TextStyle(
-                            color: Colors.white, fontSize: 28, fontWeight: FontWeight.w800, letterSpacing: -.5)),
+                            fontFamily: 'Georgia', fontFamilyFallback: ['Times New Roman', 'serif'], color: Colors.white, fontSize: 30, fontWeight: FontWeight.w700)),
                     const SizedBox(height: 4),
                     const Text('Tell us what you need and the right team will reply within 2 working days.',
                         style: TextStyle(color: Colors.white70, fontSize: 14, height: 1.4)),
@@ -2942,7 +2241,7 @@ class _RequestPageState extends State<RequestPage> {
             ),
           ),
           Padding(
-            padding: const EdgeInsets.fromLTRB(20, 20, 20, 120),
+            padding: const EdgeInsets.fromLTRB(20, 20, 20, 32),
             child: Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
               // ── Section 1: student details ──
               _section(p, 'Student details', Icons.badge_outlined, [
@@ -3087,7 +2386,7 @@ class _RequestPageState extends State<RequestPage> {
               Row(children: [
                 Expanded(
                   flex: 3,
-                  child: GradientButton('Submit request', Icons.send_rounded, _submit),
+                  child: PrimaryButton('Submit request', Icons.send_rounded, _submit),
                 ),
                 const SizedBox(width: 12),
                 Expanded(
@@ -3096,8 +2395,8 @@ class _RequestPageState extends State<RequestPage> {
                     style: OutlinedButton.styleFrom(
                       foregroundColor: p.text,
                       side: BorderSide(color: p.line, width: 1.5),
-                      minimumSize: const Size.fromHeight(56),
-                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(18)),
+                      minimumSize: const Size.fromHeight(54),
+                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(6)),
                     ),
                     onPressed: () => _reset(),
                     icon: const Icon(Icons.restart_alt_rounded),
