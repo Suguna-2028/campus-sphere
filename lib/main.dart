@@ -1429,7 +1429,19 @@ class EventsPage extends StatefulWidget {
 
 class _EventsPageState extends State<EventsPage> {
   final Set<int> going = {};
+  final TextEditingController _searchController = TextEditingController();
+
   String filter = 'All';
+  String _searchQuery = '';
+  bool _gridView = false;
+  bool _showAdvancedFilters = false;
+  String _registrationFilter = 'All';
+
+  @override
+  void dispose() {
+    _searchController.dispose();
+    super.dispose();
+  }
 
   void _toggle(int i) {
     setState(() => going.contains(i) ? going.remove(i) : going.add(i));
@@ -1445,12 +1457,212 @@ class _EventsPageState extends State<EventsPage> {
     }
   }
 
+  Widget _eventCard(CampusEvent event, int eventIndex, bool isGoing, Pal p) {
+    return Padding(
+      padding: const EdgeInsets.only(bottom: 18),
+      child: Tap(
+        label: 'Open ${event.title}',
+        onTap: () => _open(eventIndex),
+        child: Panel(
+          padding: EdgeInsets.zero,
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              SizedBox(
+                height: 170,
+                width: double.infinity,
+                child: NetImage(event.img),
+              ),
+              Container(height: 3, color: kPri),
+              Padding(
+                padding: const EdgeInsets.all(16),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Eyebrow('${event.cat}  •  ${event.date}', color: p.accent),
+                    const SizedBox(height: 8),
+                    Text(
+                      event.title,
+                      maxLines: 2,
+                      overflow: TextOverflow.ellipsis,
+                      style: serif(22, height: 1.2),
+                    ),
+                    const SizedBox(height: 8),
+                    Row(
+                      children: [
+                        Icon(Icons.place_outlined, size: 16, color: p.sub),
+                        const SizedBox(width: 5),
+                        Expanded(
+                          child: Text(
+                            event.venue,
+                            maxLines: 1,
+                            overflow: TextOverflow.ellipsis,
+                            style: TextStyle(color: p.sub, fontSize: 13),
+                          ),
+                        ),
+                      ],
+                    ),
+                    const SizedBox(height: 14),
+                    Row(
+                      children: [
+                        Icon(Icons.groups_outlined, size: 16, color: p.sub),
+                        const SizedBox(width: 6),
+                        Expanded(
+                          child: Text(
+                            event.going,
+                            style: TextStyle(color: p.sub, fontSize: 12.5),
+                          ),
+                        ),
+                        Tap(
+                          label: isGoing ? 'Cancel registration' : 'Register for ${event.title}',
+                          onTap: () => _toggle(eventIndex),
+                          child: Container(
+                            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 9),
+                            decoration: BoxDecoration(
+                              color: isGoing ? p.soft : kPri,
+                              borderRadius: BorderRadius.circular(5),
+                              border: isGoing ? Border.all(color: p.line) : null,
+                            ),
+                            child: Text(
+                              isGoing ? '✓ Going' : 'Register',
+                              style: TextStyle(
+                                color: isGoing ? p.text : Colors.white,
+                                fontSize: 12.5,
+                                fontWeight: FontWeight.w700,
+                              ),
+                            ),
+                          ),
+                        ),
+                      ],
+                    ),
+                  ],
+                ),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     final p = Pal.of(context);
     final cats = ['All', ...{for (final e in events) e.cat}];
+
+    final filteredEvents = <CampusEvent>[];
+
+    for (final event in events) {
+      final matchesCategory = filter == 'All' || event.cat == filter;
+
+      final searchableText =
+      '${event.title} ${event.venue} ${event.cat} ${event.date} ${event.about}'
+          .toLowerCase();
+
+      final matchesSearch = searchableText.contains(_searchQuery);
+
+      final eventIndex = events.indexOf(event);
+      final isRegistered = going.contains(eventIndex);
+
+      final matchesRegistration =
+          _registrationFilter == 'All' ||
+              (_registrationFilter == 'Registered' && isRegistered) ||
+              (_registrationFilter == 'Not registered' && !isRegistered);
+
+      if (matchesCategory && matchesSearch && matchesRegistration) {
+        filteredEvents.add(event);
+      }
+    }
     return Column(children: [
       PageHeader('Events', "What's happening at $kCollege", kImgGrad),
+      Padding(
+        padding: const EdgeInsets.fromLTRB(20, 12, 20, 8),
+        child: Column(
+          children: [
+            TextField(
+              controller: _searchController,
+              onChanged: (value) {
+                setState(() => _searchQuery = value.trim().toLowerCase());
+              },
+              decoration: InputDecoration(
+                hintText: 'Search events, venues, dates...',
+                prefixIcon: const Icon(Icons.search),
+                suffixIcon: _searchQuery.isEmpty
+                    ? null
+                    : IconButton(
+                  icon: const Icon(Icons.clear),
+                  onPressed: () {
+                    _searchController.clear();
+                    setState(() => _searchQuery = '');
+                  },
+                ),
+                border: OutlineInputBorder(
+                  borderRadius: BorderRadius.circular(10),
+                ),
+              ),
+            ),
+            const SizedBox(height: 8),
+            Row(
+              children: [
+                TextButton.icon(
+                  onPressed: () {
+                    setState(() {
+                      _showAdvancedFilters = !_showAdvancedFilters;
+                    });
+                  },
+                  icon: const Icon(Icons.tune),
+                  label: Text(
+                    _showAdvancedFilters
+                        ? 'Hide advanced filters'
+                        : 'Advanced filters',
+                  ),
+                ),
+                const Spacer(),
+                IconButton(
+                  tooltip: 'List view',
+                  onPressed: () => setState(() => _gridView = false),
+                  icon: Icon(
+                    Icons.view_list,
+                    color: !_gridView ? kPri : null,
+                  ),
+                ),
+                IconButton(
+                  tooltip: 'Grid view',
+                  onPressed: () => setState(() => _gridView = true),
+                  icon: Icon(
+                    Icons.grid_view,
+                    color: _gridView ? kPri : null,
+                  ),
+                ),
+              ],
+            ),
+            if (_showAdvancedFilters)
+              DropdownButtonFormField<String>(
+                initialValue: _registrationFilter,
+                decoration: const InputDecoration(
+                  labelText: 'Registration status',
+                  border: OutlineInputBorder(),
+                ),
+                items: const [
+                  DropdownMenuItem(value: 'All', child: Text('All events')),
+                  DropdownMenuItem(
+                    value: 'Registered',
+                    child: Text('Registered'),
+                  ),
+                  DropdownMenuItem(
+                    value: 'Not registered',
+                    child: Text('Not registered'),
+                  ),
+                ],
+                onChanged: (value) {
+                  if (value != null) {
+                    setState(() => _registrationFilter = value);
+                  }
+                },
+              ),
+          ],
+        ),
+      ),
       SizedBox(
         height: 68,
         child: ListView.separated(
@@ -1478,60 +1690,41 @@ class _EventsPageState extends State<EventsPage> {
         ),
       ),
       Expanded(
-        child: ListView(padding: const EdgeInsets.fromLTRB(20, 4, 20, 32), children: [
-          for (int i = 0; i < events.length; i++)
-            if (filter == 'All' || events[i].cat == filter)
-              Reveal(
-                index: i,
-                child: Padding(
-                  padding: const EdgeInsets.only(bottom: 18),
-                  child: Tap(
-                    label: 'Open ${events[i].title}',
-                    onTap: () => _open(i), // direct Navigator.push to the event details route
-                    child: Panel(
-                      padding: EdgeInsets.zero,
-                      child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-                        SizedBox(height: 170, width: double.infinity, child: NetImage(events[i].img)),
-                        Container(height: 3, color: kPri),
-                        Padding(
-                          padding: const EdgeInsets.all(16),
-                          child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-                            Eyebrow('${events[i].cat}  •  ${events[i].date}', color: p.accent),
-                            const SizedBox(height: 8),
-                            Text(events[i].title, style: serif(22, height: 1.2)),
-                            const SizedBox(height: 8),
-                            Row(children: [
-                              Icon(Icons.place_outlined, size: 16, color: p.sub),
-                              const SizedBox(width: 5),
-                              Expanded(child: Text(events[i].venue, style: TextStyle(color: p.sub, fontSize: 13.5))),
-                            ]),
-                            const SizedBox(height: 14),
-                            Row(children: [
-                              Text(events[i].going, style: const TextStyle(fontWeight: FontWeight.w700)),
-                              const Spacer(),
-                              Tap(
-                                label: going.contains(i) ? 'Registered' : 'Register for ${events[i].title}',
-                                onTap: () => _toggle(i),
-                                child: Container(
-                                  padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
-                                  decoration: BoxDecoration(
-                                    color: going.contains(i) ? Colors.transparent : kPri,
-                                    borderRadius: BorderRadius.circular(6),
-                                    border: Border.all(color: going.contains(i) ? kSuccess : kPri),
-                                  ),
-                                  child: Text(going.contains(i) ? '✓ Going' : 'Register',
-                                      style: TextStyle(fontWeight: FontWeight.w800, color: going.contains(i) ? kSuccess : Colors.white)),
-                                ),
-                              ),
-                            ]),
-                          ]),
-                        ),
-                      ]),
-                    ),
-                  ),
-                ),
+        child: _gridView
+            ? GridView.builder(
+          padding: const EdgeInsets.fromLTRB(20, 4, 20, 32),
+          gridDelegate: const SliverGridDelegateWithMaxCrossAxisExtent(
+            maxCrossAxisExtent: 420,
+            mainAxisSpacing: 16,
+            crossAxisSpacing: 16,
+            mainAxisExtent: 390,
+          ),
+          itemCount: filteredEvents.length,
+          itemBuilder: (context, index) {
+            final event = filteredEvents[index];
+            final eventIndex = events.indexOf(event);
+            final isGoing = going.contains(eventIndex);
+
+            return _eventCard(
+              event,
+              eventIndex,
+              isGoing,
+              p,
+            );
+          },
+        )
+            : ListView(
+          padding: const EdgeInsets.fromLTRB(20, 4, 20, 32),
+          children: [
+            for (final event in filteredEvents)
+              _eventCard(
+                event,
+                events.indexOf(event),
+                going.contains(events.indexOf(event)),
+                p,
               ),
-        ]),
+          ],
+        ),
       ),
     ]);
   }
