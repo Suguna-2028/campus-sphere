@@ -1,0 +1,29 @@
+{
+  "project_info": {
+    "project_number": "874756510031",
+    "project_id": "campussphere-df092",
+    "storage_bucket": "campussphere-df092.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:874756510031:android:334d9377451b5902b2b53a",
+        "android_client_info": {
+          "package_name": "com.example.campus_sphere"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyDTImEKK_SoC0IhWJEe626DDSXC_f-KU2I"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}
